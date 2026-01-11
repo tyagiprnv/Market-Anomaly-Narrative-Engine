@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Last Updated**: 2026-01-11 (News Aggregation Complete)
+**Last Updated**: 2026-01-11 (News Clustering Complete)
 
 ## Overview
 
@@ -267,24 +267,68 @@ DETECTION__NEWS_WINDOW_MINUTES=30
 
 ---
 
-## 🚧 In Progress (0%)
+### 8. Phase 1: News Clustering (100%)
+
+- ✅ NewsClusterer class with embedding generation
+- ✅ sentence-transformers integration (all-MiniLM-L6-v2 model)
+- ✅ HDBSCAN clustering with noise detection
+- ✅ Centroid extraction for representative headlines
+- ✅ Dominant sentiment calculation per cluster
+- ✅ Database persistence (NewsArticle + NewsCluster tables)
+- ✅ Support for both persistent and non-persistent clustering
+- ✅ Comprehensive unit tests (17 tests, 100% pass rate)
+
+**Files**:
+- `/src/phase1_detector/clustering/clustering.py` - Main NewsClusterer class
+- `/src/phase1_detector/clustering/__init__.py` - Module exports
+- `/tests/unit/phase1/test_clustering.py` - Unit tests
+
+**Key Features**:
+- **Semantic embeddings**: Uses sentence-transformers to generate embeddings from article titles + summaries
+- **HDBSCAN clustering**: Hierarchical density-based clustering with configurable min_cluster_size
+- **Noise handling**: Articles that don't fit any cluster are marked with cluster_id = -1
+- **Centroid selection**: Automatically selects the most representative article per cluster
+- **Sentiment aggregation**: Calculates mean sentiment for each cluster
+- **Database integration**: Persists clusters and articles with embeddings to PostgreSQL
+
+**Example Usage**:
+```python
+from src.phase1_detector.clustering import NewsClusterer
+from src.database.connection import get_db_session
+
+# With database persistence
+with get_db_session() as session:
+    clusterer = NewsClusterer(session=session)
+    clusters = clusterer.cluster_and_persist(anomaly_id, articles)
+
+    for cluster in clusters:
+        print(f"Cluster {cluster.cluster_number}: {cluster.size} articles")
+        print(f"  Representative: {cluster.centroid_summary}")
+        print(f"  Sentiment: {cluster.dominant_sentiment:.2f}")
+
+# Without persistence (for testing/analysis)
+clusterer = NewsClusterer()
+result = clusterer.cluster_for_anomaly(anomaly_id, articles)
+print(f"Found {result['n_clusters']} clusters and {result['n_noise']} noise points")
+```
+
+**Test Results**:
+- Total tests: 17
+- Passed: 17 (100%)
+- Coverage: Embedding generation, clustering, persistence, edge cases
+- Tests include: initialization, embeddings, clustering, centroid extraction, sentiment calculation, database persistence
+
+**Configuration**:
+```bash
+# .env settings
+CLUSTERING__EMBEDDING_MODEL=all-MiniLM-L6-v2
+CLUSTERING__MIN_CLUSTER_SIZE=2
+CLUSTERING__CLUSTERING_ALGORITHM=hdbscan
+```
 
 ---
 
-### 8. Phase 1: News Clustering
-
-**Status**: Not started
-
-**Planned Components**:
-- Sentence-transformers embeddings (all-MiniLM-L6-v2)
-- HDBSCAN clustering
-- Cluster summarization (centroid selection)
-- Sentiment scoring per cluster
-
-**Files to Create**:
-- `/src/phase1_detector/clustering/embedder.py`
-- `/src/phase1_detector/clustering/clusterer.py`
-- `/src/phase1_detector/clustering/models.py`
+## 🚧 In Progress (0%)
 
 ---
 
@@ -455,7 +499,7 @@ alembic upgrade head
 | **Phase 1** | Anomaly detection | ✅ Complete | 100% |
 | **Phase 1** | Data ingestion | ✅ Complete | 100% |
 | **Phase 1** | News aggregation | ✅ Complete | 100% |
-| **Phase 1** | News clustering | ⏳ Not started | 0% |
+| **Phase 1** | News clustering | ✅ Complete | 100% |
 | **Phase 2** | LLM client | ⏳ Not started | 0% |
 | **Phase 2** | Agent tools | ⏳ Not started | 0% |
 | **Phase 2** | Journalist agent | ⏳ Not started | 0% |
@@ -469,9 +513,9 @@ alembic upgrade head
 ### Overall Progress
 
 - **Total Components**: 17
-- **Completed**: 7 (41.2%)
+- **Completed**: 8 (47.1%)
 - **In Progress**: 0 (0%)
-- **Not Started**: 10 (58.8%)
+- **Not Started**: 9 (52.9%)
 
 ### Lines of Code
 
@@ -483,9 +527,11 @@ Core implementation:
 - Database models: ~200 lines
 - Statistical detectors: ~400 lines
 - Data ingestion: ~400 lines
+- News aggregation: ~500 lines
+- News clustering: ~300 lines
 - Configuration: ~200 lines
-- Tests: ~350 lines
-- Total: ~1,550 lines
+- Tests: ~700 lines
+- Total: ~2,700 lines
 ```
 
 ---
@@ -496,7 +542,7 @@ Core implementation:
 
 1. ✅ ~~Set up data ingestion (Coinbase + Binance APIs)~~
 2. ✅ ~~Implement news aggregation (CryptoPanic + Reddit + NewsAPI)~~
-3. Build news clustering (embeddings + HDBSCAN)
+3. ✅ ~~Build news clustering (embeddings + HDBSCAN)~~
 4. Test Phase 1 end-to-end
 
 ### Short-term (Week 3-4)
@@ -594,13 +640,19 @@ docker run --name mane-postgres \
 ## 📝 Notes
 
 - **Architecture**: Foundation is solid with proper separation of concerns
-- **Data Ingestion**: Both Coinbase and Binance clients working with live APIs
-- **Testing**: Unit tests for data ingestion at 84% coverage (12 tests, 100% pass rate)
+- **Phase 1 Complete**: All data collection components are now implemented
+  - Data Ingestion: Both Coinbase and Binance clients working with live APIs
+  - News Aggregation: CryptoPanic, Reddit, NewsAPI integration complete
+  - News Clustering: sentence-transformers + HDBSCAN implementation working
+- **Testing**: Comprehensive test coverage across all Phase 1 components
+  - Data ingestion: 12 tests (100% pass)
+  - News aggregation: 18 tests (100% pass)
+  - News clustering: 17 tests (100% pass)
 - **Database**: Schema is well-designed for time-series and relationships
 - **Configuration**: Flexible system supports multiple deployment environments
 - **Documentation**: Comprehensive guides for development and API usage
 
-**Next milestone**: Complete Phase 1 (news aggregation + clustering)
+**Next milestone**: Begin Phase 2 (LLM client + journalist agent)
 
 ---
 
