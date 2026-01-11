@@ -58,8 +58,9 @@ The Market Anomaly Narrative Engine solves a critical problem in quantitative fi
 ```bash
 git clone https://github.com/your-org/market-anomaly-narrative-engine.git
 cd market-anomaly-narrative-engi
+```
 
-2. **Create virtual environment**
+### 2. **Create virtual environment**
 ```bash
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
