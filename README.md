@@ -48,25 +48,26 @@ The Market Anomaly Narrative Engine solves a critical problem in quantitative fi
 ### Prerequisites
 
 - Python 3.13+
+- uv (https://github.com/astral-sh/uv)
 - PostgreSQL 14+ (or Docker)
 - API keys for LLM provider (OpenAI or Anthropic)
 
-### Installation
+## Installation
 
-1. **Clone and navigate to the repository**
+### 1. Clone and navigate to the repository
 ```bash
-cd market-anomaly-narrative-engine
-```
+git clone https://github.com/your-org/market-anomaly-narrative-engine.git
+cd market-anomaly-narrative-engi
 
 2. **Create virtual environment**
 ```bash
-python -m venv .venv
+uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 3. **Install dependencies**
 ```bash
-pip install -e .
+uv sync
 ```
 
 4. **Set up PostgreSQL**
