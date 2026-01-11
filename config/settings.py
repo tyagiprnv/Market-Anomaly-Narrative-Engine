@@ -73,6 +73,23 @@ class DetectionSettings(BaseSettings):
     )
 
 
+class DataIngestionSettings(BaseSettings):
+    """Data ingestion configuration."""
+
+    # Primary and backup sources
+    primary_source: Literal["coinbase", "binance"] = "coinbase"
+
+    # API Keys (optional for public endpoints)
+    coinbase_api_key: str | None = None
+    coinbase_api_secret: str | None = None
+    binance_api_key: str | None = None
+    binance_api_secret: str | None = None
+
+    # Polling configuration
+    poll_interval_seconds: int = 60
+    request_timeout_seconds: int = 10
+
+
 class NewsSettings(BaseSettings):
     """News API configuration."""
 
@@ -106,6 +123,7 @@ class Settings(BaseSettings):
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
     detection: DetectionSettings = Field(default_factory=DetectionSettings)
+    data_ingestion: DataIngestionSettings = Field(default_factory=DataIngestionSettings)
     news: NewsSettings = Field(default_factory=NewsSettings)
     clustering: ClusteringSettings = Field(default_factory=ClusteringSettings)
 
