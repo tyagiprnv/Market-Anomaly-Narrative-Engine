@@ -1,0 +1,93 @@
+[project]
+name = "market-anomaly-narrative-engine"
+version = "0.1.0"
+description = "Detects crypto price anomalies and generates AI narratives"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    # Core framework
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+
+    # Database
+    "sqlalchemy>=2.0.36",
+    "psycopg2-binary>=2.9.10",
+    "alembic>=1.14.0",
+
+    # API clients
+    "httpx>=0.28.1",
+    "aiohttp>=3.11.11",
+
+    # Crypto APIs
+    "coinbase-advanced-py>=1.5.0",
+    "python-binance>=1.0.23",
+
+    # News APIs
+    "praw>=7.8.1",
+    "newsapi-python>=0.2.7",
+
+    # LLM
+    "litellm>=1.57.5",
+    "openai>=1.58.1",
+    "anthropic>=0.42.0",
+
+    # ML/Embeddings
+    "sentence-transformers>=3.3.1",
+    "transformers>=4.47.1",
+    "torch>=2.5.1",
+
+    # Clustering
+    "scikit-learn>=1.6.1",
+    "hdbscan>=0.8.40",
+    "numpy>=2.2.1",
+    "pandas>=2.2.3",
+
+    # Statistics
+    "scipy>=1.15.1",
+    "statsmodels>=0.14.4",
+
+    # Scheduling
+    "apscheduler>=3.11.0",
+
+    # Logging & Monitoring
+    "structlog>=25.1.0",
+    "prometheus-client>=0.21.1",
+
+    # CLI
+    "click>=8.1.8",
+    "rich>=13.9.4",
+
+    # Utils
+    "python-dotenv>=1.0.1",
+    "pyyaml>=6.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.2",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "black>=24.10.0",
+    "ruff>=0.8.5",
+    "mypy>=1.14.1",
+]
+
+[project.scripts]
+mane = "main:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 100
+target-version = ['py313']
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
