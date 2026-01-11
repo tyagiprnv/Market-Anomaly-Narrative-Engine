@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Last Updated**: 2026-01-11
+**Last Updated**: 2026-01-11 (News Aggregation Complete)
 
 ## Overview
 
@@ -188,25 +188,86 @@ DATA_INGESTION__BINANCE_API_KEY=
 
 ---
 
+## ✅ Completed Components (Continued)
+
+### 7. Phase 1: News Aggregation (100%)
+
+- ✅ Abstract `NewsClient` base class
+- ✅ CryptoPanic API client (crypto-specific news with sentiment)
+- ✅ Reddit API client (PRAW - crypto subreddit discussions)
+- ✅ NewsAPI client (general news from major outlets)
+- ✅ NewsAggregator (combines all sources)
+- ✅ Time-window filtering (±30 minutes around anomaly)
+- ✅ News tagging (pre_event vs post_event)
+- ✅ Pydantic models for all news data types
+- ✅ Deduplication by URL
+- ✅ Health checks for all sources
+- ✅ Comprehensive unit tests (18 tests, 100% pass rate)
+
+**Files**:
+- `/src/phase1_detector/news_aggregation/news_client.py` - Abstract base class
+- `/src/phase1_detector/news_aggregation/models.py` - Pydantic models (NewsArticle, RedditPost, etc.)
+- `/src/phase1_detector/news_aggregation/cryptopanic_client.py` - CryptoPanic API
+- `/src/phase1_detector/news_aggregation/reddit_client.py` - Reddit PRAW client
+- `/src/phase1_detector/news_aggregation/newsapi_client.py` - NewsAPI client
+- `/src/phase1_detector/news_aggregation/aggregator.py` - Multi-source aggregator
+- `/tests/unit/phase1/test_news_aggregation.py` - Unit tests
+- `/examples/test_news_aggregation.py` - Usage example
+
+**Key Features**:
+- **Multi-source aggregation**: CryptoPanic, Reddit, NewsAPI
+- **Time-windowed fetching**: Get news within ±N minutes of anomaly
+- **Causal filtering**: Tag articles as pre_event (could have caused) or post_event (reported after)
+- **Sentiment analysis**: Extract sentiment from CryptoPanic votes
+- **Provider-agnostic design**: Easy to add more news sources
+- **Concurrent fetching**: Fetch from all sources in parallel
+
+**Example Usage**:
+```python
+from src.phase1_detector.news_aggregation import NewsAggregator
+from datetime import datetime
+
+# Initialize aggregator (uses settings from config)
+aggregator = NewsAggregator()
+
+# Get news around an anomaly (key use case for Phase 2)
+anomaly_time = datetime.now()
+articles = await aggregator.get_news_for_anomaly(
+    symbols=["BTC-USD"],
+    anomaly_time=anomaly_time,
+    window_minutes=30,  # ±30 minutes
+)
+
+# Articles are tagged with timing information
+for article in articles:
+    print(f"[{article.timing_tag}] {article.title}")
+    print(f"  Time diff: {article.time_diff_minutes:.1f} minutes")
+```
+
+**Test Results**:
+- Total tests: 18
+- Passed: 18 (100%)
+- Coverage: All clients, models, and aggregator tested
+- Mock-based tests for API clients
+
+**Configuration**:
+```bash
+# .env settings (required)
+NEWS__CRYPTOPANIC_API_KEY=your_key_here
+NEWS__REDDIT_CLIENT_ID=your_client_id
+NEWS__REDDIT_CLIENT_SECRET=your_secret
+NEWS__REDDIT_USER_AGENT=MarketAnomalyEngine/0.1.0
+
+# Optional
+NEWS__NEWSAPI_API_KEY=your_key_here
+
+# Time window configuration
+DETECTION__NEWS_WINDOW_MINUTES=30
+```
+
+---
+
 ## 🚧 In Progress (0%)
-
-### 7. Phase 1: News Aggregation
-
-**Status**: Not started
-
-**Planned Components**:
-- CryptoPanic API client
-- Reddit API client (PRAW)
-- NewsAPI client
-- Time-window filtering (±30 minutes)
-- News tagging (pre_event vs post_event)
-
-**Files to Create**:
-- `/src/phase1_detector/news_aggregation/news_client.py` - Abstract base
-- `/src/phase1_detector/news_aggregation/cryptopanic_client.py`
-- `/src/phase1_detector/news_aggregation/reddit_client.py`
-- `/src/phase1_detector/news_aggregation/newsapi_client.py`
-- `/src/phase1_detector/news_aggregation/models.py`
 
 ---
 
@@ -393,7 +454,7 @@ alembic upgrade head
 | **Infrastructure** | Documentation | ✅ Complete | 100% |
 | **Phase 1** | Anomaly detection | ✅ Complete | 100% |
 | **Phase 1** | Data ingestion | ✅ Complete | 100% |
-| **Phase 1** | News aggregation | ⏳ Not started | 0% |
+| **Phase 1** | News aggregation | ✅ Complete | 100% |
 | **Phase 1** | News clustering | ⏳ Not started | 0% |
 | **Phase 2** | LLM client | ⏳ Not started | 0% |
 | **Phase 2** | Agent tools | ⏳ Not started | 0% |
@@ -408,9 +469,9 @@ alembic upgrade head
 ### Overall Progress
 
 - **Total Components**: 17
-- **Completed**: 6 (35.3%)
+- **Completed**: 7 (41.2%)
 - **In Progress**: 0 (0%)
-- **Not Started**: 11 (64.7%)
+- **Not Started**: 10 (58.8%)
 
 ### Lines of Code
 
@@ -434,7 +495,7 @@ Core implementation:
 ### Immediate Priorities (Week 1-2)
 
 1. ✅ ~~Set up data ingestion (Coinbase + Binance APIs)~~
-2. Implement news aggregation (CryptoPanic + Reddit)
+2. ✅ ~~Implement news aggregation (CryptoPanic + Reddit + NewsAPI)~~
 3. Build news clustering (embeddings + HDBSCAN)
 4. Test Phase 1 end-to-end
 
