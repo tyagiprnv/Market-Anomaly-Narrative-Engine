@@ -126,13 +126,13 @@ mane list-narratives --limit 10
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    PHASE 1: DETECTOR                            │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐     │
-│  │ Price Data   │───▶│  Statistical │───▶│     News     │     │
-│  │  Ingestion   │    │   Detection  │    │  Clustering  │     │
-│  │(Coinbase API)│    │(Z-score, BB) │    │ (HDBSCAN)    │     │
-│  └──────────────┘    └──────────────┘    └──────────────┘     │
-│         ▼                    ▼                    ▼            │
-│    [Price DB] ──────▶ [Anomalies] ◀────── [News Articles]     │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
+│  │ Price Data   │───▶│  Statistical │───▶│     News     │       │
+│  │  Ingestion   │    │   Detection  │    │  Clustering  │       │
+│  │(Coinbase API)│    │(Z-score, BB) │    │ (HDBSCAN)    │       │
+│  └──────────────┘    └──────────────┘    └──────────────┘       │
+│         ▼                    ▼                    ▼             │
+│    [Price DB] ──────▶ [Anomalies] ◀────── [News Articles]       │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -144,7 +144,7 @@ mane list-narratives --limit 10
 │              │  ┌──────────────────┐   │                        │
 │              │  │ verify_timestamp │   │                        │
 │              │  │ sentiment_check  │   │                        │
-│              │  │search_historical │◀──┼─── Tool Loop          │
+│              │  │search_historical │◀──┼─── Tool Loop           │
 │              │  │  market_context  │   │                        │
 │              │  │ social_sentiment │   │                        │
 │              │  └──────────────────┘   │                        │
@@ -158,20 +158,20 @@ mane list-narratives --limit 10
 ┌─────────────────────────────────────────────────────────────────┐
 │                    PHASE 3: SKEPTIC                             │
 │                                                                 │
-│    ┌─────────────────┐         ┌─────────────────┐            │
-│    │  Rule-Based     │         │   Judge LLM     │            │
-│    │  Validation     │────┬───▶│   Validation    │            │
-│    │ - Sentiment ✓   │    │    │ - Plausibility  │            │
-│    │ - Magnitude ✓   │    │    │ - Causality     │            │
-│    │ - Timing ✓      │    │    │ - Coherence     │            │
-│    └─────────────────┘    │    └─────────────────┘            │
-│                           │                                    │
-│                           ▼                                    │
-│                  ┌─────────────────┐                           │
-│                  │   VALID  ✓      │                           │
-│                  │   or             │                           │
-│                  │   "Unknown"      │                           │
-│                  └─────────────────┘                           │
+│    ┌─────────────────┐         ┌─────────────────┐              │
+│    │  Rule-Based     │         │   Judge LLM     │              │
+│    │  Validation     │────┬───▶│   Validation    │              │
+│    │ - Sentiment ✓   │    │    │ - Plausibility  │              │
+│    │ - Magnitude ✓   │    │    │ - Causality     │              │
+│    │ - Timing ✓      │    │    │ - Coherence     │              │
+│    └─────────────────┘    │    └─────────────────┘              │
+│                           │                                     │
+│                           ▼                                     │
+│                  ┌─────────────────┐                            │
+│                  │   VALID  ✓      │                            │
+│                  │   or            │                            │
+│                  │   "Unknown"     │                            │
+│                  └─────────────────┘                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
