@@ -14,9 +14,11 @@ MANE solves a critical problem in quantitative finance: dashboards tell you *wha
 
 ## Status
 
-**✅ Implemented**: Statistical detectors (Z-score, Bollinger, volume, combined) · PostgreSQL schema · Settings management · Price ingestion · News aggregation (CryptoPanic, Reddit, NewsAPI)
-**🚧 In Progress**: News clustering
-**⏳ Planned**: LLM agent with 5 tools · Narrative generation · Validation engine · CLI · Scheduler
+**✅ Phase 1 Complete**: Statistical detectors (Z-score, Bollinger, volume, combined) · PostgreSQL schema · Settings management · Price ingestion (Coinbase, Binance) · News aggregation (CryptoPanic, Reddit, NewsAPI) · News clustering (sentence-transformers + HDBSCAN)
+
+**⏳ Next: Phase 2**: LLM agent with 5 tools · Narrative generation · Validation engine · CLI · Scheduler
+
+**Progress**: 8/17 components complete (47%)
 
 ## Quick Start
 
@@ -107,15 +109,17 @@ mane list-narratives --limit 10  # View recent narratives
 
 ```
 src/
-├── phase1_detector/        # Statistical detection, news aggregation, clustering
-├── phase2_journalist/      # LLM agent with 5 tools (timestamp, sentiment, etc.)
-├── phase3_skeptic/         # Rule-based + Judge LLM validation
-├── database/               # SQLAlchemy ORM (prices → anomalies → narratives)
-├── llm/                    # LiteLLM wrapper (OpenAI, Anthropic, Ollama)
-└── orchestration/          # Pipeline coordinator & scheduler
+├── phase1_detector/        # ✅ Statistical detection, news aggregation, clustering
+│   ├── anomaly_detection/  # ✅ Z-score, Bollinger, volume, combined detectors
+│   ├── data_ingestion/     # ✅ Coinbase & Binance API clients
+│   ├── news_aggregation/   # ✅ CryptoPanic, Reddit, NewsAPI clients
+│   └── clustering/         # ✅ sentence-transformers + HDBSCAN
+├── phase2_journalist/      # ⏳ LLM agent with 5 tools (timestamp, sentiment, etc.)
+├── phase3_skeptic/         # ⏳ Rule-based + Judge LLM validation
+├── database/               # ✅ SQLAlchemy ORM (prices → anomalies → narratives)
+├── llm/                    # ⏳ LiteLLM wrapper (OpenAI, Anthropic, Ollama)
+└── orchestration/          # ⏳ Pipeline coordinator & scheduler
 ```
-
-See `src/` for full structure. ✅ = Implemented | 🚧 = In Progress
 
 ## Configuration
 
@@ -123,12 +127,26 @@ See `src/` for full structure. ✅ = Implemented | 🚧 = In Progress
 
 **Environment Variables** (`.env`):
 ```bash
+# Database
 DATABASE__PASSWORD=yourpass           # PostgreSQL password
+
+# LLM (for Phase 2)
 LLM__PROVIDER=anthropic              # openai, anthropic, or ollama
 LLM__MODEL=claude-3-5-haiku-20241022 # Model to use
 ANTHROPIC_API_KEY=sk-ant-...         # or OPENAI_API_KEY
+
+# Detection thresholds
 DETECTION__Z_SCORE_THRESHOLD=3.0     # 3-sigma events
 DETECTION__NEWS_WINDOW_MINUTES=30    # News search ±30min
+
+# News sources (required for Phase 1)
+NEWS__CRYPTOPANIC_API_KEY=your_key
+NEWS__REDDIT_CLIENT_ID=your_id
+NEWS__REDDIT_CLIENT_SECRET=your_secret
+
+# Clustering
+CLUSTERING__EMBEDDING_MODEL=all-MiniLM-L6-v2  # sentence-transformers model
+CLUSTERING__MIN_CLUSTER_SIZE=2                 # Minimum articles per cluster
 ```
 
 **Per-Asset Tuning** (`config/thresholds.yaml`):
@@ -162,7 +180,9 @@ alembic upgrade head                              # Apply migrations
 alembic downgrade -1                              # Rollback
 ```
 
-## Example: Detecting Anomalies
+## Examples
+
+### Detecting Anomalies
 
 ```python
 import pandas as pd
@@ -179,6 +199,31 @@ detector = AnomalyDetector()
 anomalies = detector.detect_all(prices)
 
 # Output: Anomaly(type='combined', price_change=4.40%, z_score=3.87, confidence=0.89)
+```
+
+### Clustering News Articles
+
+```python
+from src.phase1_detector.clustering import NewsClusterer
+from src.phase1_detector.news_aggregation import NewsAggregator
+from datetime import datetime
+
+# Fetch news around anomaly
+aggregator = NewsAggregator()
+articles = await aggregator.get_news_for_anomaly(
+    symbols=["BTC-USD"],
+    anomaly_time=datetime.now(),
+    window_minutes=30
+)
+
+# Cluster similar articles
+clusterer = NewsClusterer()
+result = clusterer.cluster_for_anomaly(anomaly_id, articles)
+
+print(f"Found {result['n_clusters']} clusters:")
+for cluster_id, indices in result['clusters'].items():
+    if cluster_id != -1:  # Skip noise
+        print(f"  Cluster {cluster_id}: {len(indices)} articles")
 ```
 
 ## Cost & Performance
