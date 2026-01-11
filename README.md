@@ -14,8 +14,8 @@ MANE solves a critical problem in quantitative finance: dashboards tell you *wha
 
 ## Status
 
-**✅ Implemented**: Statistical detectors (Z-score, Bollinger, volume, combined) · PostgreSQL schema · Settings management
-**🚧 In Progress**: Price ingestion · News aggregation (CryptoPanic, Reddit, NewsAPI) · News clustering
+**✅ Implemented**: Statistical detectors (Z-score, Bollinger, volume, combined) · PostgreSQL schema · Settings management · Price ingestion 
+**🚧 In Progress**: News aggregation (CryptoPanic, Reddit, NewsAPI) · News clustering
 **⏳ Planned**: LLM agent with 5 tools · Narrative generation · Validation engine · CLI · Scheduler
 
 ## Quick Start
