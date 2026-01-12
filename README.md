@@ -16,13 +16,15 @@ MANE solves a critical problem in quantitative finance: dashboards tell you *wha
 
 **✅ Phase 1 Complete**: Statistical detectors (Z-score, Bollinger, volume, combined) · PostgreSQL schema · Settings management · Price ingestion (Coinbase, Binance) · News aggregation (CryptoPanic, Reddit, NewsAPI) · News clustering (sentence-transformers + HDBSCAN)
 
-**⏳ Next: Phase 2**: LLM agent with 5 tools · Narrative generation · Validation engine · CLI · Scheduler
+**✅ Phase 2 Complete**: LLM client (LiteLLM wrapper) · Agent tools (5 tools: verify_timestamp, sentiment_check, search_historical, market_context, social_sentiment) · Journalist agent with tool loop · Narrative generation with metadata tracking
 
-**Progress**: 8/17 components complete (47%)
+**⏳ Next: Phase 3**: Validation engine (rule-based + Judge LLM) · Pipeline orchestrator · CLI interface · Scheduler
+
+**Progress**: 12/17 components complete (70.6%) · 100 tests passing
 
 ## Quick Start
 
-**Prerequisites**: Python 3.13+ · [uv](https://github.com/astral-sh/uv) · PostgreSQL 14+ · LLM API key
+**Prerequisites**: Python 3.12+ · [uv](https://github.com/astral-sh/uv) · PostgreSQL 14+ · LLM API key (Anthropic/OpenAI/DeepSeek)
 
 ```bash
 # Clone and setup
@@ -114,10 +116,13 @@ src/
 │   ├── data_ingestion/     # ✅ Coinbase & Binance API clients
 │   ├── news_aggregation/   # ✅ CryptoPanic, Reddit, NewsAPI clients
 │   └── clustering/         # ✅ sentence-transformers + HDBSCAN
-├── phase2_journalist/      # ⏳ LLM agent with 5 tools (timestamp, sentiment, etc.)
+├── phase2_journalist/      # ✅ LLM agent with 5 tools + narrative generation
+│   ├── agent.py            # ✅ JournalistAgent with tool loop orchestration
+│   ├── tools/              # ✅ 5 agent tools (verify_timestamp, sentiment_check, etc.)
+│   └── prompts/            # ✅ System prompts and context templates
 ├── phase3_skeptic/         # ⏳ Rule-based + Judge LLM validation
 ├── database/               # ✅ SQLAlchemy ORM (prices → anomalies → narratives)
-├── llm/                    # ⏳ LiteLLM wrapper (OpenAI, Anthropic, Ollama)
+├── llm/                    # ✅ LiteLLM wrapper (OpenAI, Anthropic, DeepSeek, Ollama)
 └── orchestration/          # ⏳ Pipeline coordinator & scheduler
 ```
 
@@ -130,19 +135,20 @@ src/
 # Database
 DATABASE__PASSWORD=yourpass           # PostgreSQL password
 
-# LLM (for Phase 2)
-LLM__PROVIDER=anthropic              # openai, anthropic, or ollama
+# LLM (Phase 2 complete)
+LLM__PROVIDER=anthropic              # openai, anthropic, deepseek, or ollama
 LLM__MODEL=claude-3-5-haiku-20241022 # Model to use
-ANTHROPIC_API_KEY=sk-ant-...         # or OPENAI_API_KEY
+ANTHROPIC_API_KEY=sk-ant-...         # or OPENAI_API_KEY, DEEPSEEK_API_KEY
 
 # Detection thresholds
 DETECTION__Z_SCORE_THRESHOLD=3.0     # 3-sigma events
 DETECTION__NEWS_WINDOW_MINUTES=30    # News search ±30min
 
-# News sources (required for Phase 1)
+# News sources (Phase 1 complete)
 NEWS__CRYPTOPANIC_API_KEY=your_key
 NEWS__REDDIT_CLIENT_ID=your_id
 NEWS__REDDIT_CLIENT_SECRET=your_secret
+NEWS__NEWSAPI_API_KEY=your_key       # Optional third source
 
 # Clustering
 CLUSTERING__EMBEDDING_MODEL=all-MiniLM-L6-v2  # sentence-transformers model
@@ -224,6 +230,31 @@ print(f"Found {result['n_clusters']} clusters:")
 for cluster_id, indices in result['clusters'].items():
     if cluster_id != -1:  # Skip noise
         print(f"  Cluster {cluster_id}: {len(indices)} articles")
+```
+
+### Generating Narratives with AI
+
+```python
+from src.phase2_journalist import JournalistAgent
+from src.database.connection import get_db_session
+
+# Generate AI-powered narrative for an anomaly
+with get_db_session() as session:
+    agent = JournalistAgent(session=session)
+
+    # Agent automatically uses tools to investigate
+    narrative = await agent.generate_narrative(anomaly, news_articles)
+
+    print(narrative.narrative_text)
+    # Output: "Bitcoin dropped 5.2% following SEC announcement of stricter
+    # cryptocurrency regulations. The negative sentiment across social media
+    # amplified the sell-off."
+
+    print(f"Tools used: {narrative.tools_used}")
+    # ['verify_timestamp', 'sentiment_check', 'check_social_sentiment']
+
+    print(f"Confidence: {narrative.confidence_score:.2f}")
+    print(f"Generation time: {narrative.generation_time_seconds:.2f}s")
 ```
 
 ## Cost & Performance
