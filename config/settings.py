@@ -23,7 +23,7 @@ class DatabaseSettings(BaseSettings):
 class LLMSettings(BaseSettings):
     """LLM configuration."""
 
-    provider: Literal["openai", "anthropic", "ollama"] = "anthropic"
+    provider: Literal["openai", "anthropic", "ollama", "deepseek"] = "anthropic"
     model: str = "claude-3-5-haiku-20241022"
     temperature: float = 0.3
     max_tokens: int = 500
@@ -31,6 +31,7 @@ class LLMSettings(BaseSettings):
     # API keys (loaded from environment)
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None
+    deepseek_api_key: str | None = None
     ollama_api_base: str = "http://localhost:11434"
 
 
