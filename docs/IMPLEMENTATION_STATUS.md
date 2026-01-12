@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Last Updated**: 2026-01-12 (Phase 2 Journalist Agent Complete)
+**Last Updated**: 2026-01-12 (All Tests Passing - 100/100)
 
 ## Overview
 
@@ -14,8 +14,9 @@ The Market Anomaly Narrative Engine is currently at **v0.1** with the foundation
 - ✅ Python package structure with `__init__.py` files
 - ✅ `.gitignore` configuration
 - ✅ `.env.example` template
-- ✅ `pyproject.toml` with all dependencies
+- ✅ `pyproject.toml` with all dependencies (Python >=3.12)
 - ✅ Code quality configs (Black, Ruff, pytest)
+- ✅ All dependencies installed and verified
 
 **Files**:
 - `/pyproject.toml`
@@ -411,7 +412,8 @@ LLM__OLLAMA_API_BASE=http://localhost:11434
 - ✅ `check_market_context` tool - Market-wide movement detection
 - ✅ `check_social_sentiment` tool - Social media sentiment aggregation
 - ✅ `ToolRegistry` for centralized tool management
-- ✅ Comprehensive unit tests (40+ tests, 100% pass rate)
+- ✅ Comprehensive unit tests (27 tests, 100% pass rate)
+- ✅ Fixed mock setup for CheckMarketContextTool tests
 - ✅ Usage examples and documentation
 
 **Files**:
@@ -619,26 +621,30 @@ alembic upgrade head
 
 ### 16. Testing Suite
 
-**Status**: Not started
+**Status**: Phase 1 & 2 Complete (100 tests passing)
+
+**Completed Unit Tests**:
+- ✅ Phase 1: Data ingestion (12 tests)
+- ✅ Phase 1: News aggregation (18 tests)
+- ✅ Phase 1: News clustering (17 tests)
+- ✅ Phase 2: LLM client (17 tests)
+- ✅ Phase 2: Agent tools (27 tests)
+- ✅ Phase 2: Journalist agent (9 tests)
 
 **Planned Tests**:
-
-**Unit Tests**:
-- Phase 1: Statistical detectors, clustering
-- Phase 2: Agent tools, LLM client
 - Phase 3: Validation rules
-- Database: ORM models
+- Integration tests: Full pipeline (end-to-end)
+- Integration tests: Database operations
 
-**Integration Tests**:
-- Full pipeline (end-to-end)
-- Database operations
-- API mocking
+**Completed Files**:
+- ✅ `/tests/unit/phase1/test_data_ingestion.py` - 12 tests
+- ✅ `/tests/unit/phase1/test_news_aggregation.py` - 18 tests
+- ✅ `/tests/unit/phase1/test_clustering.py` - 17 tests
+- ✅ `/tests/unit/phase2/test_llm_client.py` - 17 tests
+- ✅ `/tests/unit/phase2/test_agent_tools.py` - 27 tests
+- ✅ `/tests/unit/phase2/test_journalist_agent.py` - 9 tests
 
 **Files to Create**:
-- `/tests/unit/phase1/test_statistical.py`
-- `/tests/unit/phase1/test_clustering.py`
-- `/tests/unit/phase2/test_agent.py`
-- `/tests/unit/phase2/test_tools.py`
 - `/tests/unit/phase3/test_validator.py`
 - `/tests/integration/test_pipeline.py`
 - `/tests/integration/test_database.py`
@@ -667,15 +673,15 @@ alembic upgrade head
 | **Orchestration** | Pipeline | ⏳ Not started | 0% |
 | **Orchestration** | Scheduler | ⏳ Not started | 0% |
 | **Interface** | CLI | ⏳ Not started | 0% |
-| **Testing** | Unit tests | ⏳ Not started | 0% |
+| **Testing** | Unit tests (Phase 1 & 2) | ✅ Complete | 100% |
 | **Testing** | Integration tests | ⏳ Not started | 0% |
 
 ### Overall Progress
 
 - **Total Components**: 17
-- **Completed**: 11 (64.7%)
+- **Completed**: 12 (70.6%)
 - **In Progress**: 0 (0%)
-- **Not Started**: 6 (35.3%)
+- **Not Started**: 5 (29.4%)
 
 ### Lines of Code
 
@@ -694,8 +700,8 @@ Core implementation:
 - Journalist agent: ~400 lines
 - Prompt templates: ~150 lines
 - Configuration: ~200 lines
-- Tests: ~2,200 lines
-- Total: ~6,050 lines
+- Tests: ~2,500 lines (100 tests passing)
+- Total: ~6,350 lines
 ```
 
 ---
@@ -738,7 +744,9 @@ Core implementation:
 ### Setup
 
 ```bash
-# Install dependencies
+# Install dependencies (requires Python 3.12+)
+uv pip install -e ".[dev]"
+# OR
 pip install -e ".[dev]"
 
 # Set up environment
@@ -749,13 +757,19 @@ cp .env.example .env
 ### Testing What's Built
 
 ```bash
-# Test data ingestion (live APIs)
-python examples/test_data_ingestion.py
+# Run all tests (100 tests)
+pytest
 
-# Run unit tests
-pytest tests/unit/phase1/test_data_ingestion.py -v
+# Run all tests with verbose output
+pytest -v
 
 # Run with coverage
+pytest --cov=src --cov-report=html
+
+# Run specific test file
+pytest tests/unit/phase2/test_agent_tools.py -v
+
+# Test specific component
 pytest tests/unit/phase1/test_data_ingestion.py --cov=src/phase1_detector/data_ingestion
 ```
 
@@ -820,12 +834,20 @@ docker run --name mane-postgres \
   - News aggregation: 18 tests (100% pass)
   - News clustering: 17 tests (100% pass)
   - LLM client: 17 tests (100% pass)
-  - Agent tools: 40+ tests (100% pass)
+  - Agent tools: 27 tests (100% pass)
   - Journalist agent: 9 tests (100% pass)
-  - **Total Phase 2 tests: 53 tests (51 passed, 2 pre-existing failures in tools)**
+  - **Total: 100 tests (100% pass rate)**
 - **Database**: Schema is well-designed for time-series and relationships
 - **Configuration**: Flexible system supports multiple deployment environments
 - **Documentation**: Comprehensive guides for development and API usage
+
+**Recent Fixes (2026-01-12)**:
+- Fixed Python version requirement: Changed from `>=3.13` to `>=3.12` in pyproject.toml to support Python 3.12.8
+- Installed all missing dependencies: hdbscan, praw, litellm, and all other required packages
+- Fixed CheckMarketContextTool test failures: Updated mock chain setup to properly handle SQLAlchemy query results
+  - Fixed `test_market_wide_movement` test by creating proper mock chain for session.query()
+  - Fixed `test_isolated_movement` test by ensuring `.all()` returns actual lists
+- All 100 tests now passing with no failures
 
 **Next milestone**: Complete Phase 3 (validation engine with rule-based and Judge LLM validation)
 
