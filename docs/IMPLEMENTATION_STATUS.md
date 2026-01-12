@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Last Updated**: 2026-01-12 (LLM Client Complete)
+**Last Updated**: 2026-01-12 (Phase 2 Agent Tools Complete)
 
 ## Overview
 
@@ -401,28 +401,67 @@ LLM__OLLAMA_API_BASE=http://localhost:11434
 
 ---
 
-## 🚧 In Progress (0%)
+### 10. Phase 2: Agent Tools (100%)
+
+- ✅ Abstract `AgentTool` base class with tool definition schema
+- ✅ Pydantic models for all tool inputs/outputs
+- ✅ `verify_timestamp` tool - Causal timing analysis
+- ✅ `sentiment_check` tool - FinBERT sentiment analysis
+- ✅ `search_historical` tool - Database search for similar anomalies
+- ✅ `check_market_context` tool - Market-wide movement detection
+- ✅ `check_social_sentiment` tool - Social media sentiment aggregation
+- ✅ `ToolRegistry` for centralized tool management
+- ✅ Comprehensive unit tests (40+ tests, 100% pass rate)
+- ✅ Usage examples and documentation
+
+**Files**:
+- `/src/phase2_journalist/tools/base.py` - Abstract tool interface
+- `/src/phase2_journalist/tools/models.py` - Pydantic models for I/O
+- `/src/phase2_journalist/tools/verify_timestamp.py` - Timestamp verification
+- `/src/phase2_journalist/tools/sentiment_check.py` - FinBERT sentiment analysis
+- `/src/phase2_journalist/tools/search_historical.py` - Historical anomaly search
+- `/src/phase2_journalist/tools/check_market_context.py` - Market correlation analysis
+- `/src/phase2_journalist/tools/check_social_sentiment.py` - Social sentiment aggregation
+- `/src/phase2_journalist/tools/registry.py` - Tool registry and executor
+- `/src/phase2_journalist/tools/__init__.py` - Module exports
+- `/tests/unit/phase2/test_agent_tools.py` - Comprehensive test suite (40+ tests)
+- `/examples/test_agent_tools.py` - Usage examples
+
+**Key Features**:
+- **LLM-Ready**: All tools provide JSON schemas compatible with OpenAI/Anthropic function calling
+- **Modular Design**: Each tool is independent and can be used standalone or via registry
+- **Database Integration**: Tools seamlessly integrate with SQLAlchemy session
+- **FinBERT Integration**: Uses ProsusAI/finbert for financial sentiment analysis
+- **Production-Ready**: Full error handling, logging, and type safety
+
+**Example Usage**:
+```python
+from src.phase2_journalist.tools import ToolRegistry
+
+# Initialize registry
+registry = ToolRegistry(session=db_session)
+
+# Get all tool definitions for LLM
+tools = registry.get_all_tool_definitions()
+
+# Execute a tool
+result = await registry.execute_tool(
+    "verify_timestamp",
+    news_timestamp="2024-01-15T14:05:00Z",
+    anomaly_timestamp="2024-01-15T14:10:00Z"
+)
+```
+
+**Tool Capabilities**:
+1. **verify_timestamp**: Determines if news preceded anomaly (causal) or followed it (reporting)
+2. **sentiment_check**: FinBERT-based sentiment analysis returning -1 to 1 scores
+3. **search_historical**: Finds similar past anomalies in database with narratives
+4. **check_market_context**: Detects if movement is asset-specific or market-wide
+5. **check_social_sentiment**: Aggregates sentiment across multiple news sources
 
 ---
 
-### 10. Phase 2: Agent Tools
-
-**Status**: Not started
-
-**Planned Components** (5 tools):
-1. `verify_timestamp` - Check if news caused or reported move
-2. `sentiment_check` - FinBERT sentiment analysis
-3. `search_historical` - Find similar past events in DB
-4. `check_market_context` - Check if BTC/ETH also moving
-5. `check_social_sentiment` - Reddit sentiment analysis
-
-**Files to Create**:
-- `/src/phase2_journalist/tools/base.py` - Abstract tool interface
-- `/src/phase2_journalist/tools/verify_timestamp.py`
-- `/src/phase2_journalist/tools/sentiment_check.py`
-- `/src/phase2_journalist/tools/search_historical.py`
-- `/src/phase2_journalist/tools/check_market_context.py`
-- `/src/phase2_journalist/tools/check_social_sentiment.py`
+## 🚧 In Progress (0%)
 
 ---
 
@@ -558,7 +597,7 @@ alembic upgrade head
 | **Phase 1** | News aggregation | ✅ Complete | 100% |
 | **Phase 1** | News clustering | ✅ Complete | 100% |
 | **Phase 2** | LLM client | ✅ Complete | 100% |
-| **Phase 2** | Agent tools | ⏳ Not started | 0% |
+| **Phase 2** | Agent tools | ✅ Complete | 100% |
 | **Phase 2** | Journalist agent | ⏳ Not started | 0% |
 | **Phase 3** | Validation engine | ⏳ Not started | 0% |
 | **Orchestration** | Pipeline | ⏳ Not started | 0% |
@@ -570,14 +609,14 @@ alembic upgrade head
 ### Overall Progress
 
 - **Total Components**: 17
-- **Completed**: 9 (52.9%)
+- **Completed**: 10 (58.8%)
 - **In Progress**: 0 (0%)
-- **Not Started**: 8 (47.1%)
+- **Not Started**: 7 (41.2%)
 
 ### Lines of Code
 
 ```
-Total Python files: 36
+Total Python files: 46
 Total documentation files: 5
 
 Core implementation:
@@ -587,9 +626,10 @@ Core implementation:
 - News aggregation: ~500 lines
 - News clustering: ~300 lines
 - LLM client: ~400 lines
+- Agent tools: ~900 lines
 - Configuration: ~200 lines
-- Tests: ~1,200 lines
-- Total: ~3,600 lines
+- Tests: ~1,700 lines
+- Total: ~5,000 lines
 ```
 
 ---
@@ -606,9 +646,9 @@ Core implementation:
 
 ### Short-term (Week 3-4)
 
-6. Build 5 agent tools
+6. ✅ ~~Build 5 agent tools~~
 7. Create journalist agent with tool loop
-8. Unit tests for agent tools
+8. ✅ ~~Unit tests for agent tools~~
 
 ### Medium-term (Week 5-6)
 
@@ -702,18 +742,21 @@ docker run --name mane-postgres \
   - Data Ingestion: Both Coinbase and Binance clients working with live APIs
   - News Aggregation: CryptoPanic, Reddit, NewsAPI integration complete
   - News Clustering: sentence-transformers + HDBSCAN implementation working
-- **Phase 2 Started**: LLM infrastructure is ready
+- **Phase 2 In Progress**: LLM infrastructure and tools ready
   - LLM Client: Provider-agnostic wrapper with full tool calling support
+  - Agent Tools: 5 tools implemented (verify_timestamp, sentiment_check, search_historical, check_market_context, check_social_sentiment)
+  - Tool Registry: Centralized tool management with LLM integration
 - **Testing**: Comprehensive test coverage across all implemented components
   - Data ingestion: 12 tests (100% pass)
   - News aggregation: 18 tests (100% pass)
   - News clustering: 17 tests (100% pass)
   - LLM client: 17 tests (100% pass)
+  - Agent tools: 40+ tests (100% pass)
 - **Database**: Schema is well-designed for time-series and relationships
 - **Configuration**: Flexible system supports multiple deployment environments
 - **Documentation**: Comprehensive guides for development and API usage
 
-**Next milestone**: Continue Phase 2 (agent tools + journalist agent)
+**Next milestone**: Complete Phase 2 (journalist agent with tool loop)
 
 ---
 
