@@ -3,7 +3,7 @@ name = "market-anomaly-narrative-engine"
 version = "0.1.0"
 description = "Detects crypto price anomalies and generates AI narratives"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     # Core framework
     "pydantic>=2.9.0",

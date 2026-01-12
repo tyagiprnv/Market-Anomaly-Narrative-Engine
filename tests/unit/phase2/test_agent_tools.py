@@ -255,19 +255,24 @@ class TestCheckMarketContextTool:
 
             return [price1, price2]
 
-        mock_query = Mock()
-
-        # Mock different responses based on symbol
-        def query_side_effect(*args):
-            result_mock = Mock()
-            result_mock.filter.return_value.filter.return_value.order_by.return_value.all = Mock()
-            return result_mock
-
-        mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.side_effect = [
+        # Set up query results using side_effect for sequential calls
+        results = [
             create_mock_prices("SOL-USD", 100, 95),  # -5%
             create_mock_prices("BTC-USD", 45000, 43500),  # -3.3%
             create_mock_prices("ETH-USD", 3000, 2910),  # -3%
         ]
+
+        # Create a proper mock chain
+        mock_query = MagicMock()
+        mock_filter1 = MagicMock()
+        mock_filter2 = MagicMock()
+        mock_order = MagicMock()
+
+        mock_session.query.return_value = mock_query
+        mock_query.filter.return_value = mock_filter1
+        mock_filter1.filter.return_value = mock_filter2
+        mock_filter2.order_by.return_value = mock_order
+        mock_order.all.side_effect = results
 
         result = await tool.execute(
             target_symbol="SOL-USD",
@@ -284,7 +289,37 @@ class TestCheckMarketContextTool:
     @pytest.mark.asyncio
     async def test_isolated_movement(self, tool, mock_session):
         """Test detection of isolated asset movement."""
-        # This test would check when only target moves, not reference assets
+        # Mock price data showing target moves but reference assets are stable
+        def create_mock_prices(symbol, start_price, end_price):
+            price1 = Mock(spec=Price)
+            price1.price = start_price
+            price1.timestamp = datetime(2024, 1, 15, 14, 0, 0)
+
+            price2 = Mock(spec=Price)
+            price2.price = end_price
+            price2.timestamp = datetime(2024, 1, 15, 14, 10, 0)
+
+            return [price1, price2]
+
+        # Set up query results using side_effect for sequential calls
+        results = [
+            create_mock_prices("DOGE-USD", 100, 110),  # +10% - significant movement
+            create_mock_prices("BTC-USD", 45000, 45200),  # +0.4% - stable
+            create_mock_prices("ETH-USD", 3000, 3015),  # +0.5% - stable
+        ]
+
+        # Create a proper mock chain
+        mock_query = MagicMock()
+        mock_filter1 = MagicMock()
+        mock_filter2 = MagicMock()
+        mock_order = MagicMock()
+
+        mock_session.query.return_value = mock_query
+        mock_query.filter.return_value = mock_filter1
+        mock_filter1.filter.return_value = mock_filter2
+        mock_filter2.order_by.return_value = mock_order
+        mock_order.all.side_effect = results
+
         result = await tool.execute(
             target_symbol="DOGE-USD",
             timestamp=datetime(2024, 1, 15, 14, 10, 0),
