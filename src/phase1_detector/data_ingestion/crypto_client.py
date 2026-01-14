@@ -1,9 +1,15 @@
 """Abstract base class for cryptocurrency exchange clients."""
 
 from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
 from typing import Sequence
 
+import pandas as pd
+from sqlalchemy.orm import Session
+from sqlalchemy.dialects.postgresql import insert
+
 from src.phase1_detector.data_ingestion.models import PriceData
+from src.database.models import Price
 
 
 class CryptoClient(ABC):
@@ -73,3 +79,86 @@ class CryptoClient(ABC):
             Source name (e.g., 'coinbase', 'binance')
         """
         pass
+
+    async def store_price(self, price_data: PriceData, session: Session) -> None:
+        """Store price data to database.
+
+        Uses INSERT ... ON CONFLICT DO NOTHING to handle duplicates gracefully.
+
+        Args:
+            price_data: Price data to store
+            session: SQLAlchemy database session
+
+        Raises:
+            Exception: If database operation fails
+        """
+        # Convert PriceData (Pydantic) to dict for insertion
+        price_dict = {
+            "symbol": price_data.symbol,
+            "timestamp": price_data.timestamp,
+            "price": price_data.price,
+            "volume_24h": price_data.volume_24h,
+            "high_24h": price_data.high_24h,
+            "low_24h": price_data.low_24h,
+            "bid": price_data.bid,
+            "ask": price_data.ask,
+            "source": price_data.source,
+            "created_at": datetime.utcnow(),
+        }
+
+        # Use PostgreSQL INSERT ... ON CONFLICT to handle duplicates
+        stmt = insert(Price).values(**price_dict)
+        # Ignore duplicates based on symbol + timestamp (unique constraint)
+        stmt = stmt.on_conflict_do_nothing(index_elements=["symbol", "timestamp"])
+
+        session.execute(stmt)
+        session.commit()
+
+    async def get_price_history(
+        self,
+        symbol: str,
+        minutes: int,
+        session: Session,
+    ) -> pd.DataFrame:
+        """Retrieve price history from database.
+
+        Queries the last N minutes of price data for the given symbol.
+
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTC-USD')
+            minutes: Number of minutes of history to fetch
+            session: SQLAlchemy database session
+
+        Returns:
+            DataFrame with columns: [timestamp, price, volume, symbol]
+            Returns empty DataFrame if no data found
+
+        Raises:
+            Exception: If database query fails
+        """
+        # Calculate cutoff time
+        cutoff_time = datetime.utcnow() - timedelta(minutes=minutes)
+
+        # Query price history
+        prices = (
+            session.query(Price)
+            .filter(
+                Price.symbol == symbol,
+                Price.timestamp >= cutoff_time,
+            )
+            .order_by(Price.timestamp.asc())
+            .all()
+        )
+
+        # Convert to DataFrame
+        if not prices:
+            return pd.DataFrame(columns=["timestamp", "price", "volume", "symbol"])
+
+        data = {
+            "timestamp": [p.timestamp for p in prices],
+            "price": [p.price for p in prices],
+            "volume": [p.volume_24h for p in prices],
+            "symbol": [p.symbol for p in prices],
+        }
+
+        return pd.DataFrame(data)

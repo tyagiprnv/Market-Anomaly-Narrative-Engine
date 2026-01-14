@@ -157,6 +157,44 @@ class ValidationSettings(BaseSettings):
     consistency_threshold: float = 0.8  # For tool consistency checks
 
 
+class OrchestrationSettings(BaseSettings):
+    """Orchestration and scheduling settings."""
+
+    # Idempotency
+    duplicate_window_minutes: int = Field(
+        default=5,
+        description="Window for checking duplicate anomalies (minutes)",
+    )
+
+    # Price history
+    price_history_lookback_minutes: int = Field(
+        default=60,
+        description="Minutes of price history to fetch for detection",
+    )
+
+    min_price_points: int = Field(
+        default=30,
+        description="Minimum price data points required for detection",
+    )
+
+    # Retry policy
+    max_retries_per_symbol: int = Field(
+        default=3,
+        description="Max retry attempts for failed symbol processing",
+    )
+
+    retry_delay_seconds: int = Field(
+        default=10,
+        description="Delay between retry attempts (seconds)",
+    )
+
+    # Resource limits
+    max_concurrent_llm_calls: int = Field(
+        default=2,
+        description="Max concurrent LLM API calls (rate limiting)",
+    )
+
+
 class Settings(BaseSettings):
     """Main application settings."""
 
@@ -175,6 +213,7 @@ class Settings(BaseSettings):
     news: NewsSettings = Field(default_factory=NewsSettings)
     clustering: ClusteringSettings = Field(default_factory=ClusteringSettings)
     validation: ValidationSettings = Field(default_factory=ValidationSettings)
+    orchestration: OrchestrationSettings = Field(default_factory=OrchestrationSettings)
 
     # Scheduler
     poll_interval_seconds: int = 60
