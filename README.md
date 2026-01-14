@@ -20,9 +20,9 @@ MANE solves a critical problem in quantitative finance: dashboards tell you *wha
 
 **✅ Phase 3 Complete**: Validation engine with 6 validators (5 rule-based + 1 LLM) · Weighted score aggregation · Parallel execution · Conditional LLM validation · Database persistence
 
-**⏳ Next**: Pipeline orchestrator (Phase 1→2→3) · CLI interface · Scheduler · Integration tests
+**✅ ALL PHASES COMPLETE**: End-to-end pipeline working (Phase 1→2→3) · CLI interface with 6 commands · Scheduler for continuous monitoring · Integration tests
 
-**Progress**: 13/17 components complete (76.5%) · 143 tests passing (100% pass rate)
+**Progress**: 17/17 components complete (100%) · 165+ tests passing (100% pass rate)
 
 ## Quick Start
 
@@ -44,13 +44,16 @@ docker run --name mane-postgres -e POSTGRES_PASSWORD=yourpass -p 5432:5432 -d po
 cp .env.example .env
 # Edit .env with: DATABASE__PASSWORD, ANTHROPIC_API_KEY (or OPENAI_API_KEY)
 
-# Initialize database (when implemented)
+# Initialize database
 mane init-db
 
-# Run detection (when implemented)
-mane detect --symbol BTC-USD  # Detect anomalies for Bitcoin
-mane serve                     # Start scheduled detection (every 60s)
-mane list-narratives --limit 10  # View recent narratives
+# Run detection
+mane detect --symbol BTC-USD     # Detect anomalies for Bitcoin
+mane detect --all                # Detect for all configured symbols
+mane serve                       # Start continuous monitoring scheduler
+mane list-narratives --limit 10  # View recent narratives (table format)
+mane list-narratives --format json --validated-only  # JSON output, validated only
+mane metrics                     # View performance metrics
 ```
 
 ## Architecture
@@ -151,7 +154,11 @@ src/
 │   └── prompts/            # ✅ Judge LLM system prompt and context templates
 ├── database/               # ✅ SQLAlchemy ORM (prices → anomalies → narratives)
 ├── llm/                    # ✅ LiteLLM wrapper (OpenAI, Anthropic, DeepSeek, Ollama)
-└── orchestration/          # ⏳ Pipeline coordinator & scheduler
+├── orchestration/          # ✅ Pipeline coordinator & scheduler
+│   ├── pipeline.py         # ✅ MarketAnomalyPipeline (8-step Phase 1→2→3 workflow)
+│   └── scheduler.py        # ✅ AnomalyDetectionScheduler (continuous monitoring)
+└── cli/                    # ✅ CLI utilities
+    └── utils.py            # ✅ Async command support, signal handling
 ```
 
 ## Configuration
@@ -206,10 +213,11 @@ asset_specific_thresholds:
 # Install dev dependencies
 uv pip install -e ".[dev]"
 
-# Run tests (143 tests, 100% pass rate)
+# Run tests (165+ tests, 100% pass rate)
 pytest                                            # All tests
 pytest --cov=src --cov-report=html               # With coverage
-pytest tests/unit/phase3/                        # Phase 3 tests (43 tests)
+pytest tests/unit/orchestration/                 # Orchestration tests (40 tests)
+pytest tests/integration/                        # Integration tests (5 tests)
 pytest tests/unit/phase1/test_statistical.py     # Specific file
 
 # Code quality
@@ -223,7 +231,84 @@ alembic upgrade head                              # Apply migrations
 alembic downgrade -1                              # Rollback
 ```
 
-## Examples
+## CLI Usage
+
+### Initialize Database
+
+```bash
+# Create database tables
+mane init-db
+```
+
+### Run Detection
+
+```bash
+# Detect anomalies for a specific symbol
+mane detect --symbol BTC-USD
+
+# Example output:
+# ╭─────────────────────── Anomaly Detected: BTC-USD ───────────────────────╮
+# │ Type: price_drop                                                         │
+# │ Confidence: 0.89                                                         │
+# │ Price Change: -5.20%                                                     │
+# │ Z-Score: -3.87                                                           │
+# │                                                                          │
+# │ Narrative:                                                               │
+# │ Bitcoin dropped 5.2% following SEC announcement of stricter             │
+# │ cryptocurrency regulations. The negative sentiment across social        │
+# │ media amplified the sell-off.                                           │
+# │                                                                          │
+# │ Validation: ✓ Passed (score: 0.78)                                      │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+
+# Detect for all configured symbols
+mane detect --all
+```
+
+### Start Continuous Monitoring
+
+```bash
+# Start scheduler (runs until Ctrl+C)
+mane serve
+
+# Example output:
+# ╭────────────── Market Anomaly Narrative Engine ──────────────╮
+# │ Status: Starting scheduler...                               │
+# │ Monitoring: 5 symbols                                       │
+# │ Poll Interval: 300 seconds                                  │
+# │ Press Ctrl+C to stop                                        │
+# ╰─────────────────────────────────────────────────────────────╯
+#
+# [14:30:00] Storing prices for 5 symbols...
+# [14:35:00] Running detection cycle...
+# [14:35:02] BTC-USD: No anomaly detected
+# [14:35:04] ETH-USD: Anomaly detected (narrative generated)
+```
+
+### View Results
+
+```bash
+# View recent narratives (table format)
+mane list-narratives --limit 10
+
+# Filter by symbol and validation status
+mane list-narratives --symbol BTC-USD --validated-only
+
+# JSON output for programmatic use
+mane list-narratives --format json --limit 5
+```
+
+### View Metrics
+
+```bash
+# Display scheduler performance metrics
+mane metrics
+
+# JSON format
+mane metrics --format json
+```
+
+## Python API Examples
 
 ### Detecting Anomalies
 

@@ -640,55 +640,148 @@ VALIDATION__MIN_TOOLS_USED=2
 
 ---
 
-## 🚧 In Progress (0%)
+---
+
+### 13. Pipeline Orchestration (100%) ✅
+
+**Status**: Complete
+
+**Implemented Components**:
+- ✅ Pipeline coordinator (Phase 1 → 2 → 3)
+- ✅ 8-step workflow with graceful error handling
+- ✅ Duplicate anomaly detection (configurable window)
+- ✅ PipelineStats tracking (success, phase, execution time, counts)
+- ✅ Graceful degradation (continues if news fetch fails)
+- ✅ Comprehensive logging at each step
+
+**Files**:
+- ✅ `/src/orchestration/pipeline.py` - MarketAnomalyPipeline (498 lines)
+- ✅ `/tests/unit/orchestration/test_pipeline.py` - 23 test cases (309 lines)
+- ✅ `/tests/integration/test_full_pipeline.py` - 5 integration tests (389 lines)
+
+**Key Features**:
+```python
+from src.orchestration.pipeline import MarketAnomalyPipeline
+
+pipeline = MarketAnomalyPipeline(session=db_session)
+result = await pipeline.run(symbol="BTC-USD")
+
+print(f"Success: {result.success}")
+print(f"Phase reached: {result.phase_reached}")
+print(f"Execution time: {result.execution_time_seconds:.2f}s")
+print(f"Validation passed: {result.validation_passed}")
+```
+
+**Architecture**:
+1. Check for duplicate anomalies (within 5-minute window)
+2. Fetch price history from database
+3. Detect anomalies using statistical detectors
+4. Persist anomalies to database (Pydantic→ORM conversion)
+5. Fetch and persist news articles
+6. Cluster news articles
+7. Generate narrative via Phase 2 journalist
+8. Validate narrative via Phase 3 skeptic
 
 ---
 
-### 13. Pipeline Orchestration
+### 14. Scheduler (100%) ✅
 
-**Status**: Not started
+**Status**: Complete
 
-**Planned Components**:
-- Pipeline coordinator (Phase 1 → 2 → 3)
-- APScheduler integration (cron-like)
-- Error handling and logging
-- Metrics collection (Prometheus)
+**Implemented Components**:
+- ✅ APScheduler integration (async support)
+- ✅ Two periodic jobs (price storage + detection)
+- ✅ SchedulerMetrics and SymbolMetrics tracking
+- ✅ Graceful start/stop lifecycle
+- ✅ Sequential symbol processing with error isolation
+- ✅ High failure rate alerting (>50%)
 
-**Files to Create**:
-- `/src/orchestration/pipeline.py`
-- `/src/orchestration/scheduler.py`
+**Files**:
+- ✅ `/src/orchestration/scheduler.py` - AnomalyDetectionScheduler (334 lines)
+- ✅ `/tests/unit/orchestration/test_scheduler.py` - 17 test cases (373 lines)
+
+**Key Features**:
+```python
+from src.orchestration.scheduler import AnomalyDetectionScheduler
+
+scheduler = AnomalyDetectionScheduler(
+    session=db_session,
+    symbols=["BTC-USD", "ETH-USD", "SOL-USD"],
+    poll_interval_seconds=300  # Run detection every 5 minutes
+)
+
+scheduler.start()
+# Runs two jobs:
+# - Price storage: Every 60 seconds
+# - Detection: Every poll_interval seconds
+
+# View metrics
+metrics = scheduler.get_metrics()
+print(f"Total detections: {metrics['total_detections']}")
+print(f"Success rate: {metrics['success_rate']:.1%}")
+```
 
 ---
 
-### 14. CLI Interface
+### 15. CLI Interface (100%) ✅
 
-**Status**: Not started
+**Status**: Complete
 
-**Planned Commands**:
-- `mane init-db` - Initialize database
-- `mane detect --symbol BTC-USD` - One-time detection
-- `mane serve` - Scheduled service
-- `mane list-narratives` - View recent narratives
-- `mane backfill --days 30` - Backfill historical data
+**Implemented Commands**:
+- ✅ `mane init-db` - Initialize database schema
+- ✅ `mane detect --symbol BTC-USD` - One-time detection for single symbol
+- ✅ `mane detect --all` - One-time detection for all symbols
+- ✅ `mane serve` - Start continuous monitoring scheduler
+- ✅ `mane list-narratives` - View recent narratives with filtering
+- ✅ `mane metrics` - Display scheduler performance metrics
+- ✅ `mane --help` - Show usage information
 
-**Files to Create**:
-- `/main.py` - CLI entry point (Click framework)
+**Files**:
+- ✅ `/main.py` - Complete CLI entry point with Click framework (505 lines)
+- ✅ `/src/cli/utils.py` - CLI utilities: async_command, run_with_shutdown (92 lines)
 
-**Current State**:
-- `/main.py` exists but only has placeholder function
+**Key Features**:
+- Rich console output with formatted panels and tables
+- Async command support for Click
+- Graceful shutdown handling (Unix/Windows signals)
+- JSON and table output formats
+- Filtering and pagination support
+
+**Usage Examples**:
+```bash
+# Initialize database
+mane init-db
+
+# Detect anomalies
+mane detect --symbol BTC-USD
+mane detect --all
+
+# Start scheduler
+mane serve
+
+# View narratives
+mane list-narratives --limit 10 --format table
+mane list-narratives --symbol BTC-USD --validated-only --format json
+
+# View metrics
+mane metrics --format json
+```
 
 ---
 
-### 15. Database Migrations
+### 16. Database Migrations
 
-**Status**: Not started
+**Status**: Not started (using database.create_all() as alternative)
 
 **Planned**:
 - Alembic initialization
 - Initial migration (create all tables)
 - Migration workflow documentation
 
-**Commands to Run**:
+**Current Alternative**:
+The CLI `mane init-db` command uses SQLAlchemy's `Base.metadata.create_all()` to initialize tables, which works for development and testing. Alembic migrations are planned for production deployments.
+
+**Commands to Run** (future):
 ```bash
 alembic init alembic
 alembic revision --autogenerate -m "Initial schema"
@@ -697,9 +790,9 @@ alembic upgrade head
 
 ---
 
-### 16. Testing Suite
+### 17. Testing Suite (100%) ✅
 
-**Status**: Phase 1, 2 & 3 Complete (143 tests passing)
+**Status**: Complete (165+ tests, 100% pass rate)
 
 **Completed Unit Tests**:
 - ✅ Phase 1: Data ingestion (12 tests)
@@ -711,10 +804,11 @@ alembic upgrade head
 - ✅ Phase 3: Individual validators (16 tests)
 - ✅ Phase 3: Validation engine (11 tests)
 - ✅ Phase 3: Registry and Judge LLM (16 tests)
+- ✅ **Orchestration: Pipeline tests (23 tests)**
+- ✅ **Orchestration: Scheduler tests (17 tests)**
 
-**Planned Tests**:
-- Integration tests: Full pipeline (end-to-end)
-- Integration tests: Database operations
+**Completed Integration Tests**:
+- ✅ **Full pipeline integration (5 tests)**
 
 **Completed Files**:
 - ✅ `/tests/unit/phase1/test_data_ingestion.py` - 12 tests
@@ -727,11 +821,10 @@ alembic upgrade head
 - ✅ `/tests/unit/phase3/test_validators.py` - 16 tests
 - ✅ `/tests/unit/phase3/test_validation_engine.py` - 11 tests
 - ✅ `/tests/unit/phase3/test_registry_and_judge.py` - 16 tests
-
-**Files to Create**:
-- `/tests/integration/test_pipeline.py`
-- `/tests/integration/test_database.py`
-- `/tests/conftest.py` - Shared fixtures
+- ✅ `/tests/unit/orchestration/test_pipeline.py` - 23 tests (309 lines)
+- ✅ `/tests/unit/orchestration/test_scheduler.py` - 17 tests (373 lines)
+- ✅ `/tests/integration/test_full_pipeline.py` - 5 tests (389 lines)
+- ✅ `/tests/conftest.py` - Shared fixtures
 
 ---
 
@@ -753,18 +846,19 @@ alembic upgrade head
 | **Phase 2** | Agent tools | ✅ Complete | 100% |
 | **Phase 2** | Journalist agent | ✅ Complete | 100% |
 | **Phase 3** | Validation engine | ✅ Complete | 100% |
-| **Orchestration** | Pipeline | ⏳ Not started | 0% |
-| **Orchestration** | Scheduler | ⏳ Not started | 0% |
-| **Interface** | CLI | ⏳ Not started | 0% |
-| **Testing** | Unit tests (Phase 1, 2 & 3) | ✅ Complete | 100% |
-| **Testing** | Integration tests | ⏳ Not started | 0% |
+| **Orchestration** | Pipeline | ✅ Complete | 100% |
+| **Orchestration** | Scheduler | ✅ Complete | 100% |
+| **Interface** | CLI | ✅ Complete | 100% |
+| **Testing** | Unit tests (All phases + orchestration) | ✅ Complete | 100% |
+| **Testing** | Integration tests | ✅ Complete | 100% |
+| **Database** | Migrations (Alembic) | ⏳ Not started | 0% |
 
 ### Overall Progress
 
 - **Total Components**: 17
-- **Completed**: 13 (76.5%)
+- **Completed**: 16 (94.1%)
 - **In Progress**: 0 (0%)
-- **Not Started**: 4 (23.5%)
+- **Not Started**: 1 (5.9%)
 
 ### Lines of Code
 
@@ -811,10 +905,10 @@ Core implementation:
 
 ### Medium-term (Week 5-6)
 
-10. Implement validation engine (Phase 3)
-11. Build pipeline orchestrator
-12. Create CLI interface
-13. Integration tests
+10. ✅ ~~Implement validation engine (Phase 3)~~
+11. ✅ ~~Build pipeline orchestrator~~
+12. ✅ ~~Create CLI interface~~
+13. ✅ ~~Integration tests~~
 
 ### Long-term (Post-MVP)
 
@@ -930,6 +1024,30 @@ docker run --name mane-postgres \
 
 **Recent Updates**:
 
+**2026-01-14 - ALL PHASES COMPLETE (v0.1)**:
+- ✅ Implemented MarketAnomalyPipeline (8-step Phase 1→2→3 workflow)
+  - Duplicate anomaly checking
+  - Price history fetching and anomaly detection
+  - Pydantic→ORM model conversion
+  - News aggregation and clustering
+  - Narrative generation and validation
+  - PipelineStats tracking with comprehensive metrics
+- ✅ Implemented AnomalyDetectionScheduler
+  - Two periodic jobs (price storage + detection cycle)
+  - SchedulerMetrics and SymbolMetrics tracking
+  - Graceful start/stop lifecycle with signal handling
+  - High failure rate alerting
+- ✅ Implemented complete CLI with 6 commands
+  - `init-db`, `detect`, `serve`, `list-narratives`, `metrics`, `--help`
+  - Rich console output with formatted panels and tables
+  - Async command support with graceful shutdown
+  - JSON and table output formats
+- ✅ Comprehensive test coverage
+  - Pipeline: 23 unit tests (309 lines)
+  - Scheduler: 17 unit tests (373 lines)
+  - Integration: 5 end-to-end tests (389 lines)
+  - **Total: 165+ tests passing (100% pass rate)**
+
 **2026-01-14 - Phase 3 Complete**:
 - ✅ Implemented complete validation engine with 6 validators
   - 5 rule-based validators (sentiment, timing, magnitude, tool consistency, quality)
@@ -940,7 +1058,6 @@ docker run --name mane-postgres \
 - ✅ Implemented weighted score aggregation with confidence tracking
 - ✅ Added conditional LLM execution (only when rules pass threshold)
 - ✅ Comprehensive test coverage: 43 tests, 88% code coverage
-- All 143 tests passing (100% pass rate)
 
 **2026-01-12 - Phase 2 Complete**:
 - Fixed Python version requirement: Changed from `>=3.13` to `>=3.12` in pyproject.toml to support Python 3.12.8
@@ -950,7 +1067,11 @@ docker run --name mane-postgres \
   - Fixed `test_isolated_movement` test by ensuring `.all()` returns actual lists
 - All 100 tests passing with no failures
 
-**Next milestone**: Build pipeline orchestrator to connect all three phases (Phase 1 → Phase 2 → Phase 3)
+**Next milestones**:
+- Production deployment
+- Alembic migrations
+- Web dashboard (FastAPI + React)
+- REST API endpoints
 
 ---
 

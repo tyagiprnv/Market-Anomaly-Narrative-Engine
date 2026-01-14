@@ -301,64 +301,206 @@ Initialize database schema.
 mane init-db
 ```
 
-#### `mane detect` (Future)
-
-Run anomaly detection for a single symbol.
-
-```bash
-mane detect --symbol BTC-USD
-
-# Options:
-#   --symbol TEXT    Crypto symbol to analyze (default: BTC-USD)
-#   --threshold FLOAT Override detection threshold
-#   --window INT     Lookback window in minutes
-```
-
 **Output**:
 ```
-Detecting anomalies for BTC-USD...
-✓ Anomaly detected: PRICE_DROP
-  Price change: -5.2%
-  Z-score: -3.87
-  Confidence: 0.89
-  Detected at: 2024-01-15 14:15:00 UTC
-
-Narrative: Bitcoin dropped 5.2% at 2:15 PM UTC. The move followed news of SEC enforcement action against a major exchange.
+Initializing database...
+✓ Created table: prices
+✓ Created table: anomalies
+✓ Created table: news_articles
+✓ Created table: news_clusters
+✓ Created table: narratives
+Database initialized successfully!
 ```
 
-#### `mane serve` (Future)
+#### `mane detect`
 
-Start scheduled anomaly detection service.
+Run anomaly detection for a single symbol or all symbols.
+
+```bash
+# Detect for single symbol
+mane detect --symbol BTC-USD
+
+# Detect for all configured symbols
+mane detect --all
+```
+
+**Options**:
+- `--symbol TEXT` - Crypto symbol to analyze (e.g., BTC-USD)
+- `--all` - Run detection for all configured symbols
+
+**Output** (single symbol):
+```
+Detecting anomalies for BTC-USD...
+
+╭─────────────────────── Anomaly Detected: BTC-USD ───────────────────────╮
+│ Type: price_drop                                                         │
+│ Confidence: 0.89                                                         │
+│ Price Change: -5.20%                                                     │
+│ Z-Score: -3.87                                                           │
+│                                                                          │
+│ Narrative:                                                               │
+│ Bitcoin dropped 5.2% following SEC announcement of stricter             │
+│ cryptocurrency regulations. The negative sentiment across social        │
+│ media amplified the sell-off.                                           │
+│                                                                          │
+│ Validation: ✓ Passed (score: 0.78)                                      │
+│ Tools Used: verify_timestamp, sentiment_check, check_social_sentiment   │
+│ Generation Time: 3.45s                                                   │
+│ News Articles: 12                                                        │
+│ Clusters: 3                                                              │
+╰──────────────────────────────────────────────────────────────────────────╯
+```
+
+#### `mane serve`
+
+Start continuous anomaly detection scheduler.
 
 ```bash
 mane serve
-
-# Runs detection every 60 seconds (configurable via POLL_INTERVAL_SECONDS)
-# Press Ctrl+C to stop
 ```
 
-#### `mane list-narratives` (Future)
+Runs two periodic jobs:
+- **Price storage**: Every 60 seconds (stores current prices for all symbols)
+- **Detection cycle**: Every `DETECTION__POLL_INTERVAL_SECONDS` (default: 300 seconds)
 
-List recent generated narratives.
+Press `Ctrl+C` to gracefully stop the scheduler.
+
+**Output**:
+```
+╭────────────── Market Anomaly Narrative Engine ──────────────╮
+│ Status: Starting scheduler...                               │
+│ Monitoring: 5 symbols (BTC-USD, ETH-USD, SOL-USD, ...)     │
+│ Poll Interval: 300 seconds                                  │
+│ Press Ctrl+C to stop                                        │
+╰─────────────────────────────────────────────────────────────╯
+
+[14:30:00] Storing prices for 5 symbols...
+[14:30:01] ✓ Stored prices for all symbols
+[14:35:00] Running detection cycle...
+[14:35:02] BTC-USD: No anomaly detected
+[14:35:04] ETH-USD: ✓ Anomaly detected (narrative generated)
+[14:35:06] SOL-USD: No anomaly detected
+[14:35:08] MATIC-USD: No anomaly detected
+[14:35:10] AVAX-USD: No anomaly detected
+[14:40:00] Storing prices for 5 symbols...
+...
+^C
+[14:42:15] Shutdown signal received
+[14:42:15] Stopping scheduler gracefully...
+[14:42:15] Scheduler stopped successfully
+```
+
+#### `mane list-narratives`
+
+Query and display generated narratives.
 
 ```bash
+# Show recent narratives (table format)
 mane list-narratives --limit 10
 
-# Options:
-#   --limit INT      Number of narratives to show (default: 10)
-#   --symbol TEXT    Filter by symbol
-#   --validated BOOL Show only validated narratives
+# Filter by symbol
+mane list-narratives --symbol BTC-USD --limit 5
+
+# Show only validated narratives
+mane list-narratives --validated-only
+
+# JSON output for programmatic use
+mane list-narratives --format json --limit 5
 ```
+
+**Options**:
+- `--limit INT` - Number of narratives to show (default: 10)
+- `--symbol TEXT` - Filter by crypto symbol
+- `--validated-only` - Show only validated narratives
+- `--format [table|json]` - Output format (default: table)
 
 **Output** (table):
 ```
-┌────────────────────┬────────┬─────────────────────────────┬───────────┐
-│ Timestamp          │ Symbol │ Narrative                   │ Validated │
-├────────────────────┼────────┼─────────────────────────────┼───────────┤
-│ 2024-01-15 14:15   │ BTC    │ Bitcoin dropped 5.2% at...  │ ✓         │
-│ 2024-01-15 13:42   │ ETH    │ Ethereum surged 3.1% on...  │ ✓         │
-│ 2024-01-15 12:30   │ SOL    │ Anomaly Detected (Unknown)  │ ✗         │
-└────────────────────┴────────┴─────────────────────────────┴───────────┘
+Recent Narratives
+┌────────────────────┬─────────┬─────────────────────────────┬────────────┐
+│ Timestamp          │ Symbol  │ Narrative                   │ Validation │
+├────────────────────┼─────────┼─────────────────────────────┼────────────┤
+│ 2024-01-15 14:15   │ BTC-USD │ Bitcoin dropped 5.2% at...  │ ✓ Passed   │
+│ 2024-01-15 13:42   │ ETH-USD │ Ethereum surged 3.1% on...  │ ✓ Passed   │
+│ 2024-01-15 12:30   │ SOL-USD │ Cause unknown for 2.8%...   │ ✗ Failed   │
+└────────────────────┴─────────┴─────────────────────────────┴────────────┘
+```
+
+**Output** (JSON):
+```json
+[
+  {
+    "id": "uuid-1234",
+    "symbol": "BTC-USD",
+    "detected_at": "2024-01-15T14:15:00Z",
+    "narrative_text": "Bitcoin dropped 5.2% following SEC announcement...",
+    "validation_passed": true,
+    "validation_score": 0.78,
+    "anomaly_type": "price_drop",
+    "price_change_pct": -5.2,
+    "confidence": 0.89
+  }
+]
+```
+
+#### `mane metrics`
+
+Display scheduler performance metrics.
+
+```bash
+# Table format
+mane metrics
+
+# JSON format
+mane metrics --format json
+```
+
+**Options**:
+- `--format [table|json]` - Output format (default: table)
+
+**Output** (table):
+```
+Scheduler Metrics
+┌────────────────────────┬────────┐
+│ Metric                 │ Value  │
+├────────────────────────┼────────┤
+│ Total Detections       │ 142    │
+│ Successful             │ 98     │
+│ Failed                 │ 12     │
+│ Rejected (validation)  │ 32     │
+│ Success Rate           │ 69.0%  │
+│ Validation Pass Rate   │ 75.4%  │
+└────────────────────────┴────────┘
+
+Per-Symbol Metrics
+┌─────────┬────────────┬───────────┬──────────┬──────────────┐
+│ Symbol  │ Detections │ Successes │ Failures │ Success Rate │
+├─────────┼────────────┼───────────┼──────────┼──────────────┤
+│ BTC-USD │ 35         │ 28        │ 2        │ 80.0%        │
+│ ETH-USD │ 32         │ 25        │ 3        │ 78.1%        │
+│ SOL-USD │ 28         │ 18        │ 4        │ 64.3%        │
+└─────────┴────────────┴───────────┴──────────┴──────────────┘
+```
+
+**Output** (JSON):
+```json
+{
+  "total_detections": 142,
+  "successful_detections": 98,
+  "failed_detections": 12,
+  "rejected_validations": 32,
+  "success_rate": 0.69,
+  "validation_pass_rate": 0.754,
+  "symbols": {
+    "BTC-USD": {
+      "total_runs": 35,
+      "successful_runs": 28,
+      "failed_runs": 2,
+      "rejected_validations": 5,
+      "success_rate": 0.8
+    }
+  }
+}
 ```
 
 #### `mane backfill` (Future)

@@ -5,9 +5,9 @@
 ### Prerequisites
 
 Ensure you have:
-- Python 3.13+ (`python --version`)
+- Python 3.12+ (`python --version`) - Tested with Python 3.12.8 and 3.13
 - PostgreSQL 14+ (`psql --version`)
-- pip (`pip --version`)
+- pip or uv package manager (`pip --version` or `uv --version`)
 - Git
 
 ### Initial Setup
@@ -51,9 +51,13 @@ docker run --name mane-postgres \
 createdb mane_db
 ```
 
-6. **Initialize database** (once implemented)
+6. **Initialize database**
 ```bash
+# Create tables
 mane init-db
+
+# Verify database is ready
+psql -U postgres -d mane_db -c "\dt"
 ```
 
 ## Project Structure
@@ -64,12 +68,13 @@ market-anomaly-narrative-engine/
 │   ├── settings.py          # Pydantic settings loader
 │   └── thresholds.yaml      # Per-asset detection thresholds
 ├── src/                     # Source code
-│   ├── phase1_detector/     # ✅ Statistical detection
-│   ├── phase2_journalist/   # 🚧 LLM agent
-│   ├── phase3_skeptic/      # 🚧 Validation
+│   ├── phase1_detector/     # ✅ Statistical detection + data ingestion + news
+│   ├── phase2_journalist/   # ✅ LLM agent with tool loop
+│   ├── phase3_skeptic/      # ✅ Validation engine (6 validators)
 │   ├── database/            # ✅ ORM models
-│   ├── llm/                 # 🚧 LiteLLM wrapper
-│   └── orchestration/       # 🚧 Pipeline
+│   ├── llm/                 # ✅ LiteLLM wrapper
+│   ├── orchestration/       # ✅ Pipeline + scheduler
+│   └── cli/                 # ✅ CLI utilities
 ├── tests/                   # Test suite
 │   ├── unit/                # Unit tests
 │   ├── integration/         # Integration tests
@@ -94,15 +99,24 @@ Edit code in `src/` directory.
 ### 3. Run Tests
 
 ```bash
-# Run all tests
+# Run all tests (165+ tests)
 pytest
 
 # Run specific test file
 pytest tests/unit/phase1/test_statistical.py
 
+# Run orchestration tests
+pytest tests/unit/orchestration/
+
+# Run integration tests
+pytest tests/integration/
+
 # Run with coverage
 pytest --cov=src --cov-report=html
 open htmlcov/index.html  # View coverage report
+
+# Run specific test by name
+pytest -k "test_pipeline_success"
 ```
 
 ### 4. Code Quality Checks
@@ -265,7 +279,7 @@ def sample_btc_prices():
 ```toml
 [tool.black]
 line-length = 100
-target-version = ['py313']
+target-version = ['py312']
 ```
 
 **Usage**:
@@ -281,7 +295,7 @@ black --check .          # Check without modifying
 ```toml
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py312"
 ```
 
 **Usage**:
