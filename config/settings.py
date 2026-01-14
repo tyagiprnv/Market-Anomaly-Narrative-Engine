@@ -110,6 +110,53 @@ class ClusteringSettings(BaseSettings):
     clustering_algorithm: Literal["hdbscan", "dbscan"] = "hdbscan"
 
 
+class ValidationSettings(BaseSettings):
+    """Phase 3 validation configuration."""
+
+    # Overall threshold for passing validation
+    pass_threshold: float = 0.65
+
+    # Validator weights (relative importance, higher = more impact)
+    sentiment_match_weight: float = 1.2
+    timing_coherence_weight: float = 1.5  # Most critical validator
+    magnitude_coherence_weight: float = 0.8
+    tool_consistency_weight: float = 1.0
+    narrative_quality_weight: float = 0.5
+    judge_llm_weight: float = 1.5
+
+    # Rule-based validator thresholds
+    sentiment_alignment_threshold: float = 0.7
+    sentiment_neutral_range_lower: float = -0.2
+    sentiment_neutral_range_upper: float = 0.2
+    max_news_time_before_minutes: int = 30
+    min_causal_news_ratio: float = 0.8
+    min_tools_used: int = 2
+    z_score_small: float = 3.5
+    z_score_large: float = 5.0
+    max_sentence_count: int = 2
+    hedging_keywords: list[str] = Field(
+        default=[
+            "possibly",
+            "might have",
+            "unclear",
+            "potentially",
+            "may have",
+            "could be",
+        ]
+    )
+
+    # Judge LLM configuration
+    judge_llm_enabled: bool = True
+    judge_llm_min_trigger_score: float = 0.5  # Only run if rules pass this score
+    judge_llm_min_score: float = 3.0  # Minimum score (out of 5) to pass
+    judge_llm_model: str | None = None  # Use default LLM if None
+    judge_llm_temperature: float = 0.2  # Low temp for consistent evaluation
+
+    # Execution settings
+    parallel_validation: bool = True  # Run rule validators in parallel
+    consistency_threshold: float = 0.8  # For tool consistency checks
+
+
 class Settings(BaseSettings):
     """Main application settings."""
 
@@ -127,6 +174,7 @@ class Settings(BaseSettings):
     data_ingestion: DataIngestionSettings = Field(default_factory=DataIngestionSettings)
     news: NewsSettings = Field(default_factory=NewsSettings)
     clustering: ClusteringSettings = Field(default_factory=ClusteringSettings)
+    validation: ValidationSettings = Field(default_factory=ValidationSettings)
 
     # Scheduler
     poll_interval_seconds: int = 60
