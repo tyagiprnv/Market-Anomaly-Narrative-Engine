@@ -87,7 +87,7 @@ def init_db(drop_existing):
         # Drop existing tables if requested
         if drop_existing:
             if click.confirm(
-                "⚠️  WARNING: This will DELETE ALL DATA. Are you sure?", abort=True
+                "WARNING: This will DELETE ALL DATA. Are you sure?", abort=True
             ):
                 Base.metadata.drop_all(engine)
                 console.print("[yellow]Dropped existing tables[/yellow]")
