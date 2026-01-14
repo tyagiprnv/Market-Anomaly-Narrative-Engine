@@ -394,10 +394,10 @@ with get_db_session() as session:
     result = await engine.validate_narrative(narrative)
 
     if result.validation_passed:
-        print(f"✅ Narrative validated (score: {result.aggregate_score:.2f})")
+        print(f"Narrative validated (score: {result.aggregate_score:.2f})")
         print(f"   Reason: {result.validation_reason}")
     else:
-        print(f"❌ Validation failed (score: {result.aggregate_score:.2f})")
+        print(f"Validation failed (score: {result.aggregate_score:.2f})")
         print(f"   Reason: {result.validation_reason}")
 
     # Inspect individual validator results

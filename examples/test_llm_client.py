@@ -264,7 +264,7 @@ async def main():
         print("=" * 60)
 
     except Exception as e:
-        print(f"\n❌ Error running examples: {e}")
+        print(f"\nError running examples: {e}")
         print(
             "\nMake sure you have:\n"
             "1. Set up your .env file with API keys\n"

@@ -593,9 +593,9 @@ with get_db_session() as session:
     result = await engine.validate_narrative(narrative)
 
     if result.validation_passed:
-        print(f"✅ Validated (score: {result.aggregate_score:.2f})")
+        print(f"Validated (score: {result.aggregate_score:.2f})")
     else:
-        print(f"❌ Failed: {result.validation_reason}")
+        print(f"Failed: {result.validation_reason}")
 ```
 
 **Architecture**:

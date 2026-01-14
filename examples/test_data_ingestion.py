@@ -103,7 +103,7 @@ async def test_binance():
 
 async def main():
     """Run all tests."""
-    print("\n🚀 Market Anomaly Narrative Engine - Data Ingestion Test\n")
+    print("\nMarket Anomaly Narrative Engine - Data Ingestion Test\n")
 
     # Test both clients
     await test_coinbase()
