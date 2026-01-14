@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Last Updated**: 2026-01-12 (All Tests Passing - 100/100)
+**Last Updated**: 2026-01-14 (All Tests Passing - 143/143)
 
 ## Overview
 
@@ -544,25 +544,103 @@ LLM__MAX_TOKENS=500
 
 ---
 
-## 🚧 In Progress (0%)
+### 12. Phase 3: Validation Engine (100%)
+
+- ✅ ValidationEngine orchestrator with parallel/sequential execution
+- ✅ 5 rule-based validators (sentiment, timing, magnitude, tool consistency, narrative quality)
+- ✅ Judge LLM validator with plausibility assessment
+- ✅ ValidatorRegistry for centralized validator management
+- ✅ Weighted score aggregation with confidence tracking
+- ✅ Conditional LLM execution (only called if rules pass threshold)
+- ✅ Database persistence of validation results
+- ✅ ValidationSettings configuration in settings.py
+- ✅ Comprehensive unit tests (43 tests, 100% pass rate)
+- ✅ 88% test coverage
+
+**Files**:
+- `/src/phase3_skeptic/validator.py` - Main ValidationEngine orchestrator
+- `/src/phase3_skeptic/validators/base.py` - Abstract Validator base class
+- `/src/phase3_skeptic/validators/models.py` - Pydantic models for validation
+- `/src/phase3_skeptic/validators/registry.py` - ValidatorRegistry
+- `/src/phase3_skeptic/validators/sentiment_match.py` - Sentiment alignment validator
+- `/src/phase3_skeptic/validators/timing_coherence.py` - Timing causality validator
+- `/src/phase3_skeptic/validators/magnitude_coherence.py` - Magnitude language validator
+- `/src/phase3_skeptic/validators/tool_consistency.py` - Tool consistency validator
+- `/src/phase3_skeptic/validators/narrative_quality.py` - Text quality validator
+- `/src/phase3_skeptic/validators/judge_llm.py` - LLM-based validator
+- `/src/phase3_skeptic/prompts/skeptic.py` - Judge LLM system prompt
+- `/src/phase3_skeptic/prompts/templates.py` - Context formatting templates
+- `/tests/unit/phase3/conftest.py` - Test fixtures
+- `/tests/unit/phase3/test_validators.py` - Validator tests (16 tests)
+- `/tests/unit/phase3/test_validation_engine.py` - Engine tests (11 tests)
+- `/tests/unit/phase3/test_registry_and_judge.py` - Registry and Judge LLM tests (16 tests)
+
+**Key Features**:
+- **Hybrid validation**: Rule-based (fast) + LLM-based (comprehensive)
+- **Parallel execution**: Rule validators run concurrently (~100ms total)
+- **Conditional LLM**: Judge LLM only called when rules pass threshold (saves cost)
+- **Weighted scoring**: Each validator has configurable weight and confidence
+- **Error isolation**: One validator failure doesn't crash validation
+- **Database integration**: Updates Narrative model with validation results
+
+**Example Usage**:
+```python
+from src.phase3_skeptic import ValidationEngine
+from src.database.connection import get_db_session
+
+with get_db_session() as session:
+    engine = ValidationEngine(session=session)
+    result = await engine.validate_narrative(narrative)
+
+    if result.validation_passed:
+        print(f"✅ Validated (score: {result.aggregate_score:.2f})")
+    else:
+        print(f"❌ Failed: {result.validation_reason}")
+```
+
+**Architecture**:
+```
+ValidationEngine.validate_narrative()
+    ├─ Phase 1: Run rule validators in parallel
+    │   ├─ sentiment_match (weight: 1.2)
+    │   ├─ timing_coherence (weight: 1.5)
+    │   ├─ magnitude_coherence (weight: 0.8)
+    │   ├─ tool_consistency (weight: 1.0)
+    │   └─ narrative_quality (weight: 0.5)
+    ├─ Phase 2: Conditionally run Judge LLM
+    │   └─ judge_llm (weight: 1.5) if rule_score >= 0.5
+    ├─ Aggregate scores (weighted average)
+    ├─ Determine verdict (threshold: 0.65)
+    └─ Update Narrative in database
+```
+
+**Test Results**:
+- Total tests: 43
+- Passed: 43 (100%)
+- Coverage: 88% (643 lines covered, 78 missing)
+- Tests cover: individual validators, registry, validation engine, error handling
+
+**Configuration**:
+```bash
+# .env settings
+VALIDATION__PASS_THRESHOLD=0.65
+VALIDATION__JUDGE_LLM_ENABLED=true
+VALIDATION__PARALLEL_VALIDATION=true
+
+# Validator weights
+VALIDATION__SENTIMENT_MATCH_WEIGHT=1.2
+VALIDATION__TIMING_COHERENCE_WEIGHT=1.5
+VALIDATION__MAGNITUDE_COHERENCE_WEIGHT=0.8
+
+# Thresholds
+VALIDATION__Z_SCORE_SMALL=3.5
+VALIDATION__Z_SCORE_LARGE=5.0
+VALIDATION__MIN_TOOLS_USED=2
+```
 
 ---
 
-### 12. Phase 3: Validation Engine
-
-**Status**: Not started
-
-**Planned Components**:
-- Rule-based validation (sentiment, magnitude, timing)
-- Judge LLM validation
-- Combined verdict logic
-- Fallback to "Anomaly Detected (Reason Unknown)"
-
-**Files to Create**:
-- `/src/phase3_skeptic/validator.py`
-- `/src/phase3_skeptic/rules.py`
-- `/src/phase3_skeptic/prompts/skeptic.py`
-- `/src/phase3_skeptic/models.py`
+## 🚧 In Progress (0%)
 
 ---
 
@@ -621,7 +699,7 @@ alembic upgrade head
 
 ### 16. Testing Suite
 
-**Status**: Phase 1 & 2 Complete (100 tests passing)
+**Status**: Phase 1, 2 & 3 Complete (143 tests passing)
 
 **Completed Unit Tests**:
 - ✅ Phase 1: Data ingestion (12 tests)
@@ -630,9 +708,11 @@ alembic upgrade head
 - ✅ Phase 2: LLM client (17 tests)
 - ✅ Phase 2: Agent tools (27 tests)
 - ✅ Phase 2: Journalist agent (9 tests)
+- ✅ Phase 3: Individual validators (16 tests)
+- ✅ Phase 3: Validation engine (11 tests)
+- ✅ Phase 3: Registry and Judge LLM (16 tests)
 
 **Planned Tests**:
-- Phase 3: Validation rules
 - Integration tests: Full pipeline (end-to-end)
 - Integration tests: Database operations
 
@@ -643,9 +723,12 @@ alembic upgrade head
 - ✅ `/tests/unit/phase2/test_llm_client.py` - 17 tests
 - ✅ `/tests/unit/phase2/test_agent_tools.py` - 27 tests
 - ✅ `/tests/unit/phase2/test_journalist_agent.py` - 9 tests
+- ✅ `/tests/unit/phase3/conftest.py` - Test fixtures
+- ✅ `/tests/unit/phase3/test_validators.py` - 16 tests
+- ✅ `/tests/unit/phase3/test_validation_engine.py` - 11 tests
+- ✅ `/tests/unit/phase3/test_registry_and_judge.py` - 16 tests
 
 **Files to Create**:
-- `/tests/unit/phase3/test_validator.py`
 - `/tests/integration/test_pipeline.py`
 - `/tests/integration/test_database.py`
 - `/tests/conftest.py` - Shared fixtures
@@ -669,24 +752,24 @@ alembic upgrade head
 | **Phase 2** | LLM client | ✅ Complete | 100% |
 | **Phase 2** | Agent tools | ✅ Complete | 100% |
 | **Phase 2** | Journalist agent | ✅ Complete | 100% |
-| **Phase 3** | Validation engine | ⏳ Not started | 0% |
+| **Phase 3** | Validation engine | ✅ Complete | 100% |
 | **Orchestration** | Pipeline | ⏳ Not started | 0% |
 | **Orchestration** | Scheduler | ⏳ Not started | 0% |
 | **Interface** | CLI | ⏳ Not started | 0% |
-| **Testing** | Unit tests (Phase 1 & 2) | ✅ Complete | 100% |
+| **Testing** | Unit tests (Phase 1, 2 & 3) | ✅ Complete | 100% |
 | **Testing** | Integration tests | ⏳ Not started | 0% |
 
 ### Overall Progress
 
 - **Total Components**: 17
-- **Completed**: 12 (70.6%)
+- **Completed**: 13 (76.5%)
 - **In Progress**: 0 (0%)
-- **Not Started**: 5 (29.4%)
+- **Not Started**: 4 (23.5%)
 
 ### Lines of Code
 
 ```
-Total Python files: 50
+Total Python files: 65+
 Total documentation files: 5
 
 Core implementation:
@@ -698,10 +781,13 @@ Core implementation:
 - LLM client: ~400 lines
 - Agent tools: ~900 lines
 - Journalist agent: ~400 lines
-- Prompt templates: ~150 lines
-- Configuration: ~200 lines
-- Tests: ~2,500 lines (100 tests passing)
-- Total: ~6,350 lines
+- Validation engine: ~650 lines (Phase 3)
+  - Validators: ~440 lines
+  - Registry: ~210 lines
+- Prompt templates: ~300 lines
+- Configuration: ~250 lines
+- Tests: ~4,800 lines (143 tests passing)
+- Total: ~9,500 lines
 ```
 
 ---
@@ -836,20 +922,35 @@ docker run --name mane-postgres \
   - LLM client: 17 tests (100% pass)
   - Agent tools: 27 tests (100% pass)
   - Journalist agent: 9 tests (100% pass)
-  - **Total: 100 tests (100% pass rate)**
+  - Validation engine: 43 tests (100% pass, 88% coverage)
+  - **Total: 143 tests (100% pass rate)**
 - **Database**: Schema is well-designed for time-series and relationships
 - **Configuration**: Flexible system supports multiple deployment environments
 - **Documentation**: Comprehensive guides for development and API usage
 
-**Recent Fixes (2026-01-12)**:
+**Recent Updates**:
+
+**2026-01-14 - Phase 3 Complete**:
+- ✅ Implemented complete validation engine with 6 validators
+  - 5 rule-based validators (sentiment, timing, magnitude, tool consistency, quality)
+  - 1 LLM-based validator (Judge LLM with plausibility assessment)
+- ✅ Built ValidationEngine orchestrator with parallel execution
+- ✅ Created ValidatorRegistry for centralized management
+- ✅ Added ValidationSettings configuration
+- ✅ Implemented weighted score aggregation with confidence tracking
+- ✅ Added conditional LLM execution (only when rules pass threshold)
+- ✅ Comprehensive test coverage: 43 tests, 88% code coverage
+- All 143 tests passing (100% pass rate)
+
+**2026-01-12 - Phase 2 Complete**:
 - Fixed Python version requirement: Changed from `>=3.13` to `>=3.12` in pyproject.toml to support Python 3.12.8
 - Installed all missing dependencies: hdbscan, praw, litellm, and all other required packages
 - Fixed CheckMarketContextTool test failures: Updated mock chain setup to properly handle SQLAlchemy query results
   - Fixed `test_market_wide_movement` test by creating proper mock chain for session.query()
   - Fixed `test_isolated_movement` test by ensuring `.all()` returns actual lists
-- All 100 tests now passing with no failures
+- All 100 tests passing with no failures
 
-**Next milestone**: Complete Phase 3 (validation engine with rule-based and Judge LLM validation)
+**Next milestone**: Build pipeline orchestrator to connect all three phases (Phase 1 → Phase 2 → Phase 3)
 
 ---
 
