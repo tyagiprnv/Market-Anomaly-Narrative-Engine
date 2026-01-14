@@ -1,6 +1,505 @@
-def main():
-    print("Hello from market-anomaly-narrative-engine!")
+"""Main CLI entry point for Market Anomaly Narrative Engine."""
+
+import asyncio
+import logging
+import sys
+from datetime import datetime
+
+import click
+from rich import box
+from rich.json import JSON
+from rich.logging import RichHandler
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
+from sqlalchemy import create_engine, func, inspect
+from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.orm import selectinload
+
+from config.settings import Settings
+from src.cli.utils import async_command, console, run_with_shutdown
+from src.database.connection import get_db_context, init_database
+from src.database.models import Anomaly, Base, Narrative
+from src.orchestration.pipeline import MarketAnomalyPipeline
+from src.orchestration.scheduler import AnomalyDetectionScheduler
+
+# Setup logging with Rich handler
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    datefmt="[%X]",
+    handlers=[RichHandler(rich_tracebacks=True, markup=True)],
+)
+
+# Silence noisy libraries
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("hpack").setLevel(logging.WARNING)
+
+logger = logging.getLogger(__name__)
+
+# Load settings (global singleton)
+try:
+    settings = Settings()
+except Exception as e:
+    console.print(f"[red]Failed to load settings:[/red] {e}")
+    console.print(
+        "\n[yellow]Check your .env file and ensure all required variables are set.[/yellow]"
+    )
+    sys.exit(1)
+
+
+@click.group()
+@click.version_option(version="0.1.0", prog_name="MANE")
+def cli():
+    """Market Anomaly Narrative Engine - Detect crypto anomalies and generate AI narratives.
+
+    \b
+    Examples:
+      mane init-db                    # Initialize database
+      mane detect --symbol BTC-USD    # Run detection for one symbol
+      mane detect --all               # Run detection for all configured symbols
+      mane serve                      # Start continuous monitoring
+      mane list-narratives --limit 5  # View recent narratives
+      mane metrics                    # Show performance metrics
+    """
+    pass
+
+
+@cli.command()
+@click.option(
+    "--drop-existing",
+    is_flag=True,
+    help="Drop existing tables before creating (DANGER: destroys all data)",
+)
+def init_db(drop_existing):
+    """Initialize database schema.
+
+    Creates all required tables: prices, anomalies, news_articles,
+    narratives, and news_clusters.
+    """
+    try:
+        console.print("[cyan]Initializing database...[/cyan]")
+
+        # Create engine
+        engine = create_engine(settings.database.url)
+
+        # Drop existing tables if requested
+        if drop_existing:
+            if click.confirm(
+                "⚠️  WARNING: This will DELETE ALL DATA. Are you sure?", abort=True
+            ):
+                Base.metadata.drop_all(engine)
+                console.print("[yellow]Dropped existing tables[/yellow]")
+
+        # Create all tables
+        Base.metadata.create_all(engine)
+        console.print("[green]Database schema created successfully[/green]")
+
+        # Show created tables
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+
+        if tables:
+            table = Table(title="Created Tables", box=box.ROUNDED)
+            table.add_column("Table Name", style="cyan")
+            table.add_column("Status", style="green")
+
+            for table_name in tables:
+                table.add_row(table_name, "✓ Created")
+
+            console.print(table)
+            console.print(f"\n[green]Total: {len(tables)} tables[/green]")
+        else:
+            console.print("[yellow]No tables found[/yellow]")
+
+    except OperationalError as e:
+        console.print(f"[red]Database connection failed:[/red] {e}")
+        console.print("\n[yellow]Did you:[/yellow]")
+        console.print("  1. Start PostgreSQL?")
+        console.print("  2. Set DATABASE__PASSWORD in .env?")
+        console.print("  3. Create the database?")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Failed to initialize database:[/red] {e}")
+        logger.exception("Database initialization failed")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--symbol", type=str, help="Trading symbol (e.g., BTC-USD)")
+@click.option("--all", "detect_all", is_flag=True, help="Run for all configured symbols")
+@async_command
+async def detect(symbol, detect_all):
+    """Run anomaly detection pipeline for symbol(s).
+
+    Executes the full Phase 1 → 2 → 3 pipeline:
+    - Phase 1: Detect anomaly, fetch and cluster news
+    - Phase 2: Generate narrative explanation
+    - Phase 3: Validate narrative quality
+    """
+    # Validate arguments
+    if not symbol and not detect_all:
+        console.print("[red]Error: Specify either --symbol or --all[/red]")
+        console.print("\nUsage:")
+        console.print("  mane detect --symbol BTC-USD")
+        console.print("  mane detect --all")
+        sys.exit(1)
+
+    if symbol and detect_all:
+        console.print("[red]Error: Cannot use both --symbol and --all[/red]")
+        sys.exit(1)
+
+    try:
+        # Initialize database
+        init_database(settings.database.url)
+
+        # Create pipeline
+        pipeline = MarketAnomalyPipeline(settings)
+
+        # Determine symbols to process
+        symbols = settings.detection.symbols if detect_all else [symbol]
+
+        console.print(f"\n[cyan]Running detection for {len(symbols)} symbol(s)...[/cyan]\n")
+
+        # Process each symbol
+        results = []
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            for sym in symbols:
+                task = progress.add_task(f"Processing {sym}...", total=None)
+
+                try:
+                    with get_db_context() as session:
+                        anomaly, stats = await pipeline.run_for_symbol(sym, session)
+
+                        results.append((sym, anomaly, stats))
+                        progress.remove_task(task)
+
+                except Exception as e:
+                    console.print(f"[red]✗ [{sym}][/red] Pipeline failed: {e}")
+                    logger.exception(f"Pipeline failed for {sym}")
+                    progress.remove_task(task)
+                    continue
+
+        # Display results
+        console.print()
+        anomaly_count = 0
+
+        for sym, anomaly, stats in results:
+            if stats.anomaly_detected and anomaly:
+                anomaly_count += 1
+
+                # Format narrative (truncate if too long)
+                narrative_text = anomaly.narrative.narrative_text
+                if len(narrative_text) > 200:
+                    narrative_text = narrative_text[:197] + "..."
+
+                # Format validation status
+                if anomaly.narrative.validation_passed:
+                    validation_status = "[green]✓ VALIDATED[/green]"
+                elif anomaly.narrative.validation_passed is False:
+                    validation_status = "[red]✗ REJECTED[/red]"
+                else:
+                    validation_status = "[yellow]? UNKNOWN[/yellow]"
+
+                # Create panel
+                panel_content = (
+                    f"[bold]Type:[/bold] {anomaly.anomaly_type.value}\n"
+                    f"[bold]Confidence:[/bold] {anomaly.confidence:.2f}\n"
+                    f"[bold]Z-Score:[/bold] {anomaly.z_score:.2f}\n"
+                    f"[bold]Price Change:[/bold] {anomaly.price_change_pct:+.2f}%\n"
+                    f"[bold]Time:[/bold] {anomaly.detected_at.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                    f"[bold]Narrative:[/bold] {narrative_text}\n\n"
+                    f"[bold]Validation:[/bold] {validation_status}\n"
+                    f"[bold]News Articles:[/bold] {stats.news_count}\n"
+                    f"[bold]Duration:[/bold] {stats.execution_time_seconds:.1f}s"
+                )
+
+                console.print(
+                    Panel(
+                        panel_content,
+                        title=f"[green]✓[/green] Anomaly Detected: {sym}",
+                        border_style="green",
+                        box=box.ROUNDED,
+                    )
+                )
+            else:
+                console.print(f"[dim]• [{sym}][/dim] No anomaly detected")
+
+        # Summary
+        console.print(
+            f"\n[cyan]Summary:[/cyan] {anomaly_count}/{len(symbols)} symbols had anomalies"
+        )
+
+    except OperationalError:
+        console.print("[red]Database connection failed[/red]")
+        console.print("\n[yellow]Did you run 'mane init-db'?[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Detection failed:[/red] {e}")
+        logger.exception("Detection command failed")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--interval", type=int, help="Poll interval in seconds (overrides config)")
+@async_command
+async def serve(interval):
+    """Start continuous anomaly detection scheduler.
+
+    Runs two periodic jobs:
+    - Price storage: Every 60 seconds
+    - Anomaly detection: Every poll_interval seconds (default from config)
+
+    Press Ctrl+C to stop gracefully.
+    """
+    try:
+        # Override interval if provided
+        if interval:
+            settings.data_ingestion.poll_interval_seconds = interval
+
+        # Initialize database
+        init_database(settings.database.url)
+
+        # Create scheduler
+        scheduler = AnomalyDetectionScheduler(settings)
+
+        # Display startup info
+        console.print(
+            Panel(
+                f"[green]Monitoring {len(settings.detection.symbols)} symbols[/green]\n\n"
+                f"[bold]Symbols:[/bold] {', '.join(settings.detection.symbols)}\n"
+                f"[bold]Poll Interval:[/bold] {settings.data_ingestion.poll_interval_seconds}s\n"
+                f"[bold]Price Storage:[/bold] Every 60s\n\n"
+                f"[yellow]Press Ctrl+C to stop[/yellow]",
+                title="MANE Scheduler",
+                border_style="cyan",
+                box=box.ROUNDED,
+            )
+        )
+
+        # Run scheduler with graceful shutdown
+        await run_with_shutdown(scheduler, console)
+
+    except OperationalError:
+        console.print("[red]Database connection failed[/red]")
+        console.print("\n[yellow]Did you run 'mane init-db'?[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Scheduler failed:[/red] {e}")
+        logger.exception("Serve command failed")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--limit", type=int, default=10, help="Number of narratives to show")
+@click.option("--symbol", type=str, help="Filter by trading symbol")
+@click.option("--validated-only", is_flag=True, help="Show only validated narratives")
+@click.option(
+    "--format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format",
+)
+def list_narratives(limit, symbol, validated_only, format):
+    """List recent narratives from the database.
+
+    Shows narrative text, validation status, anomaly details, and timing.
+    """
+    try:
+        # Initialize database
+        init_database(settings.database.url)
+
+        with get_db_context() as session:
+            # Build query
+            query = (
+                session.query(Narrative)
+                .join(Anomaly)
+                .options(selectinload(Narrative.anomaly))
+                .order_by(Narrative.created_at.desc())
+            )
+
+            # Apply filters
+            if symbol:
+                query = query.filter(Anomaly.symbol == symbol)
+
+            if validated_only:
+                query = query.filter(Narrative.validation_passed == True)
+
+            # Execute query
+            narratives = query.limit(limit).all()
+
+            if not narratives:
+                console.print("[yellow]No narratives found[/yellow]")
+                if validated_only:
+                    console.print("[dim]Try without --validated-only[/dim]")
+                return
+
+            # Output based on format
+            if format == "json":
+                # JSON output
+                data = [
+                    {
+                        "id": str(n.id),
+                        "symbol": n.anomaly.symbol,
+                        "detected_at": n.anomaly.detected_at.isoformat(),
+                        "anomaly_type": n.anomaly.anomaly_type.value,
+                        "confidence": float(n.anomaly.confidence),
+                        "narrative": n.narrative_text,
+                        "validation_passed": n.validation_passed,
+                        "created_at": n.created_at.isoformat(),
+                    }
+                    for n in narratives
+                ]
+                console.print(JSON.from_data(data))
+
+            else:
+                # Table output
+                table = Table(
+                    title=f"Recent Narratives ({len(narratives)})",
+                    box=box.ROUNDED,
+                    show_lines=True,
+                )
+                table.add_column("Symbol", style="cyan", no_wrap=True)
+                table.add_column("Time", style="magenta", no_wrap=True)
+                table.add_column("Type", style="yellow")
+                table.add_column("Narrative", style="green", max_width=50)
+                table.add_column("Valid", justify="center", no_wrap=True)
+
+                for n in narratives:
+                    # Format validation status
+                    if n.validation_passed is True:
+                        validation_icon = "[green]✓[/green]"
+                    elif n.validation_passed is False:
+                        validation_icon = "[red]✗[/red]"
+                    else:
+                        validation_icon = "[yellow]?[/yellow]"
+
+                    # Truncate narrative if too long
+                    narrative_text = n.narrative_text
+                    if len(narrative_text) > 150:
+                        narrative_text = narrative_text[:147] + "..."
+
+                    table.add_row(
+                        n.anomaly.symbol,
+                        n.anomaly.detected_at.strftime("%Y-%m-%d %H:%M"),
+                        n.anomaly.anomaly_type.value,
+                        narrative_text,
+                        validation_icon,
+                    )
+
+                console.print(table)
+
+    except (OperationalError, ProgrammingError):
+        console.print("[red]Database connection failed[/red]")
+        console.print("\n[yellow]Did you run 'mane init-db'?[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Failed to list narratives:[/red] {e}")
+        logger.exception("List narratives command failed")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--symbol", type=str, help="Show metrics for specific symbol")
+@click.option(
+    "--format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format",
+)
+def metrics(symbol, format):
+    """Show performance metrics from database.
+
+    Displays aggregate statistics about anomaly detection and narrative
+    generation from the database.
+    """
+    try:
+        # Initialize database
+        init_database(settings.database.url)
+
+        with get_db_context() as session:
+            # Build base queries
+            anomaly_query = session.query(func.count(Anomaly.id))
+            narrative_query = session.query(func.count(Narrative.id))
+            validated_query = session.query(func.count(Narrative.id)).filter(
+                Narrative.validation_passed == True
+            )
+            rejected_query = session.query(func.count(Narrative.id)).filter(
+                Narrative.validation_passed == False
+            )
+
+            # Apply symbol filter if provided
+            if symbol:
+                anomaly_query = anomaly_query.filter(Anomaly.symbol == symbol)
+                narrative_query = narrative_query.join(Anomaly).filter(
+                    Anomaly.symbol == symbol
+                )
+                validated_query = validated_query.join(Anomaly).filter(
+                    Anomaly.symbol == symbol
+                )
+                rejected_query = rejected_query.join(Anomaly).filter(
+                    Anomaly.symbol == symbol
+                )
+
+            # Execute queries
+            total_anomalies = anomaly_query.scalar() or 0
+            total_narratives = narrative_query.scalar() or 0
+            validated = validated_query.scalar() or 0
+            rejected = rejected_query.scalar() or 0
+
+            # Calculate rates
+            validation_rate = (validated / total_narratives * 100) if total_narratives else 0
+            rejection_rate = (rejected / total_narratives * 100) if total_narratives else 0
+
+            # Output based on format
+            if format == "json":
+                data = {
+                    "symbol": symbol if symbol else "all",
+                    "total_anomalies": total_anomalies,
+                    "total_narratives": total_narratives,
+                    "validated_narratives": validated,
+                    "rejected_narratives": rejected,
+                    "validation_rate_pct": round(validation_rate, 2),
+                    "rejection_rate_pct": round(rejection_rate, 2),
+                }
+                console.print(JSON.from_data(data))
+
+            else:
+                # Table output
+                title = f"MANE Performance Metrics - {symbol}" if symbol else "MANE Performance Metrics"
+                table = Table(title=title, box=box.ROUNDED)
+                table.add_column("Metric", style="cyan")
+                table.add_column("Value", style="green", justify="right")
+
+                table.add_row("Total Anomalies", str(total_anomalies))
+                table.add_row("Generated Narratives", str(total_narratives))
+                table.add_row("Validated Narratives", str(validated))
+                table.add_row("Rejected Narratives", str(rejected))
+                table.add_row("Validation Rate", f"{validation_rate:.1f}%")
+                table.add_row("Rejection Rate", f"{rejection_rate:.1f}%")
+
+                console.print(table)
+
+                # Show warning if no data
+                if total_anomalies == 0:
+                    console.print(
+                        "\n[yellow]No data yet. Run 'mane detect' or 'mane serve' to start detecting anomalies.[/yellow]"
+                    )
+
+    except (OperationalError, ProgrammingError):
+        console.print("[red]Database connection failed[/red]")
+        console.print("\n[yellow]Did you run 'mane init-db'?[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Failed to retrieve metrics:[/red] {e}")
+        logger.exception("Metrics command failed")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    main()
+    cli()
