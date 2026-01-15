@@ -22,7 +22,7 @@ MANE solves a critical problem in quantitative finance: dashboards tell you *wha
 
 **✅ ALL PHASES COMPLETE**: End-to-end pipeline working (Phase 1→2→3) · CLI interface with 6 commands · Scheduler for continuous monitoring · Integration tests
 
-**Progress**: 17/17 components complete (100%) · 165+ tests passing (100% pass rate)
+**Progress**: 17/17 components complete (100%) · 165 tests passing (100% pass rate)
 
 ## Quick Start
 
@@ -46,6 +46,10 @@ cp .env.example .env
 
 # Initialize database
 mane init-db
+
+# Backfill historical data (NEW - populate price history)
+mane backfill --symbol BTC-USD --days 7   # Backfill 7 days of 1-minute data
+mane backfill --all --days 30             # Backfill 30 days for all symbols
 
 # Run detection
 mane detect --symbol BTC-USD     # Detect anomalies for Bitcoin
@@ -239,6 +243,41 @@ alembic downgrade -1                              # Rollback
 # Create database tables
 mane init-db
 ```
+
+### Backfill Historical Data (NEW)
+
+```bash
+# Backfill 7 days of 1-minute candle data for Bitcoin
+mane backfill --symbol BTC-USD --days 7
+
+# Backfill 30 days for all configured symbols
+mane backfill --all --days 30
+
+# Example output:
+# Starting backfill for 1 symbol(s)...
+# Source: coinbase
+# Date range: 7 days
+# Granularity: 1 minute
+#
+# ⠏ Storing BTC-USD (10,080 records)...
+# ✓ BTC-USD: 10,080 inserted, 0 skipped (duplicates)
+#
+# ╭─────────────── Backfill Complete ───────────────╮
+# │ Fetched: 10,080 records                         │
+# │ Inserted: 10,080 new records                    │
+# │ Skipped: 0 duplicates                           │
+# │ Symbols: 1                                      │
+# ╰─────────────────────────────────────────────────╯
+```
+
+**Why backfill?** The detection pipeline requires at least 30 minutes of price history. Backfilling populates your database so you can immediately run anomaly detection without waiting for real-time data collection.
+
+**Features**:
+- Fetches 1-minute candles from exchange APIs (Coinbase or Binance)
+- Efficient batch insertion (10-100x faster than individual inserts)
+- Idempotent (safe to re-run - skips duplicates automatically)
+- Progress tracking with real-time status updates
+- Rate-limited to respect exchange API limits
 
 ### Run Detection
 

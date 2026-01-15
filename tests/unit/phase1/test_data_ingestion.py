@@ -1,7 +1,7 @@
 """Unit tests for data ingestion clients."""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
 from unittest.mock import AsyncMock, Mock, patch
 import httpx
 
@@ -271,3 +271,206 @@ class TestBinanceClient:
         """Test source_name property."""
         client = BinanceClient()
         assert client.source_name == "binance"
+
+
+class TestHistoricalDataFetching:
+    """Tests for get_historical_prices methods."""
+
+    @pytest.mark.asyncio
+    async def test_coinbase_historical_fetch(self):
+        """Test Coinbase historical data fetching with pagination."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            # Mock candle responses (format: [time, low, high, open, close, volume])
+            mock_candles = [
+                [1704974400, 44000.0, 46000.0, 45000.0, 45500.0, 1500000000.0],
+                [1704974460, 44500.0, 46500.0, 45500.0, 46000.0, 1600000000.0],
+            ]
+
+            mock_response = Mock()
+            mock_response.json.return_value = mock_candles
+            mock_response.raise_for_status = Mock()
+            mock_client.get.return_value = mock_response
+
+            client = CoinbaseClient()
+
+            start = datetime(2024, 1, 11, 0, 0, 0, tzinfo=UTC)
+            end = datetime(2024, 1, 11, 1, 0, 0, tzinfo=UTC)
+
+            prices = await client.get_historical_prices(
+                symbol="BTC-USD",
+                start_time=start,
+                end_time=end,
+                granularity_seconds=60,
+            )
+
+            assert len(prices) == 2
+            assert all(isinstance(p, PriceData) for p in prices)
+            assert prices[0].symbol == "BTC-USD"
+            assert prices[0].source == "coinbase"
+            assert prices[0].price == 45500.0
+
+    @pytest.mark.asyncio
+    async def test_binance_historical_fetch(self):
+        """Test Binance historical data fetching with pagination."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            # Mock kline responses
+            # [Open time, Open, High, Low, Close, Volume, Close time, ...]
+            mock_klines = [
+                [
+                    1704974400000,
+                    "45000.0",
+                    "46000.0",
+                    "44000.0",
+                    "45500.0",
+                    "1500000000.0",
+                    1704974459999,
+                ],
+                [
+                    1704974460000,
+                    "45500.0",
+                    "46500.0",
+                    "44500.0",
+                    "46000.0",
+                    "1600000000.0",
+                    1704974519999,
+                ],
+            ]
+
+            mock_response = Mock()
+            mock_response.json.return_value = mock_klines
+            mock_response.raise_for_status = Mock()
+            mock_client.get.return_value = mock_response
+
+            client = BinanceClient()
+
+            start = datetime(2024, 1, 11, 0, 0, 0, tzinfo=UTC)
+            end = datetime(2024, 1, 11, 1, 0, 0, tzinfo=UTC)
+
+            prices = await client.get_historical_prices(
+                symbol="BTC-USD",
+                start_time=start,
+                end_time=end,
+                granularity_seconds=60,
+            )
+
+            assert len(prices) == 2
+            assert all(isinstance(p, PriceData) for p in prices)
+            assert prices[0].symbol == "BTC-USD"
+            assert prices[0].source == "binance"
+            assert prices[0].price == 45500.0
+
+    @pytest.mark.asyncio
+    async def test_invalid_granularity_coinbase(self):
+        """Test error handling for invalid granularity."""
+        client = CoinbaseClient()
+
+        start = datetime(2024, 1, 11, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2024, 1, 11, 1, 0, 0, tzinfo=UTC)
+
+        with pytest.raises(ValueError, match="Invalid granularity"):
+            await client.get_historical_prices(
+                symbol="BTC-USD",
+                start_time=start,
+                end_time=end,
+                granularity_seconds=999,  # Invalid
+            )
+
+    @pytest.mark.asyncio
+    async def test_invalid_granularity_binance(self):
+        """Test error handling for invalid granularity."""
+        client = BinanceClient()
+
+        start = datetime(2024, 1, 11, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2024, 1, 11, 1, 0, 0, tzinfo=UTC)
+
+        with pytest.raises(ValueError, match="Invalid granularity"):
+            await client.get_historical_prices(
+                symbol="BTC-USD",
+                start_time=start,
+                end_time=end,
+                granularity_seconds=999,  # Invalid
+            )
+
+
+class TestBulkStorage:
+    """Tests for store_prices_bulk method."""
+
+    @pytest.mark.asyncio
+    async def test_bulk_insert_success(self):
+        """Test bulk insertion of price data."""
+        mock_session = Mock()
+        mock_result = Mock()
+        mock_result.rowcount = 100
+        mock_session.execute.return_value = mock_result
+
+        # Create test data
+        base_time = datetime(2024, 1, 11, 12, 0, 0, tzinfo=UTC)
+        prices = [
+            PriceData(
+                symbol="BTC-USD",
+                timestamp=base_time + timedelta(seconds=i),
+                price=45000.0 + i,
+                volume_24h=1500000000.0,
+                high_24h=46000.0,
+                low_24h=44000.0,
+                bid=None,
+                ask=None,
+                source="coinbase",
+            )
+            for i in range(100)
+        ]
+
+        client = CoinbaseClient()
+        inserted = await client.store_prices_bulk(prices, mock_session)
+
+        assert inserted == 100
+        assert mock_session.execute.called
+        assert mock_session.commit.called
+
+    @pytest.mark.asyncio
+    async def test_bulk_insert_batching(self):
+        """Test that bulk insert respects batch size."""
+        mock_session = Mock()
+        mock_result = Mock()
+        mock_result.rowcount = 50
+        mock_session.execute.return_value = mock_result
+
+        # Create 1500 records (should be split into 2 batches of 1000 and 500)
+        base_time = datetime(2024, 1, 11, 12, 0, 0, tzinfo=UTC)
+        prices = [
+            PriceData(
+                symbol="BTC-USD",
+                timestamp=base_time + timedelta(seconds=i),
+                price=45000.0 + i,
+                volume_24h=1500000000.0,
+                high_24h=46000.0,
+                low_24h=44000.0,
+                bid=None,
+                ask=None,
+                source="coinbase",
+            )
+            for i in range(1500)
+        ]
+
+        client = CoinbaseClient()
+        await client.store_prices_bulk(prices, mock_session, batch_size=1000)
+
+        # Should be called twice (once per batch)
+        assert mock_session.execute.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_bulk_insert_empty_list(self):
+        """Test bulk insert with empty list."""
+        mock_session = Mock()
+        client = CoinbaseClient()
+
+        inserted = await client.store_prices_bulk([], mock_session)
+
+        assert inserted == 0
+        assert not mock_session.execute.called

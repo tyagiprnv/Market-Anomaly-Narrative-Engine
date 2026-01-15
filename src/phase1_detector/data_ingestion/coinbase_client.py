@@ -1,7 +1,7 @@
 """Coinbase Advanced Trade API client for price data."""
 
 import asyncio
-from datetime import datetime, UTC
+from datetime import datetime, timedelta, UTC
 from typing import Any, Sequence
 import httpx
 
@@ -129,6 +129,91 @@ class CoinbaseClient(CryptoClient):
             'coinbase'
         """
         return "coinbase"
+
+    async def get_historical_prices(
+        self,
+        symbol: str,
+        start_time: datetime,
+        end_time: datetime,
+        granularity_seconds: int = 60,
+    ) -> list[PriceData]:
+        """Fetch historical price data from Coinbase candles endpoint.
+
+        Coinbase API details:
+        - Endpoint: /products/{symbol}/candles
+        - Max 300 candles per request
+        - Granularity options: 60, 300, 900, 3600, 21600, 86400 seconds
+        - Returns: [timestamp, low, high, open, close, volume]
+        """
+        # Validate granularity
+        valid_granularities = [60, 300, 900, 3600, 21600, 86400]
+        if granularity_seconds not in valid_granularities:
+            raise ValueError(
+                f"Invalid granularity {granularity_seconds}. "
+                f"Must be one of {valid_granularities}"
+            )
+
+        all_prices = []
+
+        # Coinbase max is 300 candles per request
+        max_candles = 300
+        window_seconds = max_candles * granularity_seconds
+
+        # Pagination: Split date range into chunks
+        current_start = start_time
+
+        while current_start < end_time:
+            current_end = min(
+                current_start + timedelta(seconds=window_seconds), end_time
+            )
+
+            try:
+                # Convert to ISO 8601 format
+                start_iso = current_start.isoformat()
+                end_iso = current_end.isoformat()
+
+                url = f"{self.BASE_URL}/products/{symbol}/candles"
+                params = {
+                    "start": start_iso,
+                    "end": end_iso,
+                    "granularity": granularity_seconds,
+                }
+
+                response = await self._client.get(url, params=params)
+                response.raise_for_status()
+                candles = response.json()
+
+                # Parse candles: [timestamp, low, high, open, close, volume]
+                for candle in candles:
+                    timestamp = datetime.fromtimestamp(candle[0], tz=UTC)
+
+                    price_data = PriceData(
+                        symbol=symbol,
+                        timestamp=timestamp,
+                        price=float(candle[4]),  # close price
+                        volume_24h=float(candle[5]),  # volume
+                        high_24h=float(candle[2]),  # high
+                        low_24h=float(candle[1]),  # low
+                        bid=None,  # Not available in candles
+                        ask=None,  # Not available in candles
+                        source=self.source_name,
+                    )
+                    all_prices.append(price_data)
+
+                # Move to next window
+                current_start = current_end
+
+                # Rate limit protection (Coinbase public API: 10 req/sec)
+                await asyncio.sleep(0.1)
+
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    raise ValueError(f"Symbol {symbol} not found on Coinbase")
+                raise ConnectionError(f"Coinbase API error: {e}")
+            except httpx.RequestError as e:
+                raise ConnectionError(f"Failed to connect to Coinbase API: {e}")
+
+        return all_prices
 
     def _parse_ticker(
         self, symbol: str, ticker_data: dict[str, Any], stats_data: dict[str, Any]

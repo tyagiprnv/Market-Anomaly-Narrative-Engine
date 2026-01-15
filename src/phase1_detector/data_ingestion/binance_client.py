@@ -1,7 +1,7 @@
 """Binance API client for price data."""
 
 import asyncio
-from datetime import datetime, UTC
+from datetime import datetime, timedelta, UTC
 from typing import Any, Sequence
 import httpx
 
@@ -152,6 +152,104 @@ class BinanceClient(CryptoClient):
             'binance'
         """
         return "binance"
+
+    async def get_historical_prices(
+        self,
+        symbol: str,
+        start_time: datetime,
+        end_time: datetime,
+        granularity_seconds: int = 60,
+    ) -> list[PriceData]:
+        """Fetch historical price data from Binance klines endpoint.
+
+        Binance API details:
+        - Endpoint: /api/v3/klines
+        - Max 1000 klines per request
+        - Interval format: 1m, 5m, 15m, 1h, 6h, 1d
+        """
+        # Convert granularity to Binance interval format
+        interval_map = {
+            60: "1m",
+            300: "5m",
+            900: "15m",
+            3600: "1h",
+            21600: "6h",
+            86400: "1d",
+        }
+
+        if granularity_seconds not in interval_map:
+            raise ValueError(
+                f"Invalid granularity {granularity_seconds}. "
+                f"Must be one of {list(interval_map.keys())}"
+            )
+
+        interval = interval_map[granularity_seconds]
+        binance_symbol = self._convert_symbol(symbol)
+
+        all_prices = []
+
+        # Binance max is 1000 klines per request
+        max_klines = 1000
+        window_seconds = max_klines * granularity_seconds
+
+        # Pagination: Split date range into chunks
+        current_start = start_time
+
+        while current_start < end_time:
+            current_end = min(
+                current_start + timedelta(seconds=window_seconds), end_time
+            )
+
+            try:
+                # Convert to milliseconds (Binance uses ms timestamps)
+                start_ms = int(current_start.timestamp() * 1000)
+                end_ms = int(current_end.timestamp() * 1000)
+
+                url = f"{self.BASE_URL}/klines"
+                params = {
+                    "symbol": binance_symbol,
+                    "interval": interval,
+                    "startTime": start_ms,
+                    "endTime": end_ms,
+                    "limit": max_klines,
+                }
+
+                response = await self._client.get(url, params=params)
+                response.raise_for_status()
+                klines = response.json()
+
+                # Parse klines
+                # [Open time, Open, High, Low, Close, Volume, Close time, ...]
+                for kline in klines:
+                    timestamp = datetime.fromtimestamp(kline[0] / 1000, tz=UTC)
+
+                    price_data = PriceData(
+                        symbol=symbol,  # Use standard format
+                        timestamp=timestamp,
+                        price=float(kline[4]),  # close price
+                        volume_24h=float(kline[5]),  # volume
+                        high_24h=float(kline[2]),  # high
+                        low_24h=float(kline[3]),  # low
+                        bid=None,  # Not available in klines
+                        ask=None,  # Not available in klines
+                        source=self.source_name,
+                    )
+                    all_prices.append(price_data)
+
+                # Move to next window
+                current_start = current_end
+
+                # Rate limit protection (Binance: 1200 req/min = 20 req/sec)
+                await asyncio.sleep(0.05)
+
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 400:
+                    raise ValueError(f"Symbol {symbol} not found on Binance")
+                raise ConnectionError(f"Binance API error: {e}")
+            except httpx.RequestError as e:
+                raise ConnectionError(f"Failed to connect to Binance API: {e}")
+
+        return all_prices
 
     def _parse_ticker(self, symbol: str, data: dict[str, Any]) -> TickerData:
         """Parse Binance API response into TickerData.

@@ -8,6 +8,13 @@ from typing import Literal
 class DatabaseSettings(BaseSettings):
     """Database connection settings."""
 
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="DATABASE__",
+        extra="ignore",
+    )
+
     host: str = "localhost"
     port: int = 5432
     database: str = "mane_db"
@@ -23,6 +30,13 @@ class DatabaseSettings(BaseSettings):
 class LLMSettings(BaseSettings):
     """LLM configuration."""
 
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="LLM__",
+        extra="ignore",
+    )
+
     provider: Literal["openai", "anthropic", "ollama", "deepseek"] = "anthropic"
     model: str = "claude-3-5-haiku-20241022"
     temperature: float = 0.3
@@ -37,6 +51,13 @@ class LLMSettings(BaseSettings):
 
 class DetectionSettings(BaseSettings):
     """Anomaly detection configuration."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="DETECTION__",
+        extra="ignore",
+    )
 
     # Thresholds
     z_score_threshold: float = 3.0
@@ -77,6 +98,13 @@ class DetectionSettings(BaseSettings):
 class DataIngestionSettings(BaseSettings):
     """Data ingestion configuration."""
 
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="DATA_INGESTION__",
+        extra="ignore",
+    )
+
     # Primary and backup sources
     primary_source: Literal["coinbase", "binance"] = "coinbase"
 
@@ -94,6 +122,13 @@ class DataIngestionSettings(BaseSettings):
 class NewsSettings(BaseSettings):
     """News API configuration."""
 
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="NEWS__",
+        extra="ignore",
+    )
+
     # API Keys
     cryptopanic_api_key: str
     newsapi_api_key: str | None = None
@@ -105,6 +140,13 @@ class NewsSettings(BaseSettings):
 class ClusteringSettings(BaseSettings):
     """News clustering configuration."""
 
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="CLUSTERING__",
+        extra="ignore",
+    )
+
     embedding_model: str = "all-MiniLM-L6-v2"
     min_cluster_size: int = 2
     clustering_algorithm: Literal["hdbscan", "dbscan"] = "hdbscan"
@@ -112,6 +154,13 @@ class ClusteringSettings(BaseSettings):
 
 class ValidationSettings(BaseSettings):
     """Phase 3 validation configuration."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="VALIDATION__",
+        extra="ignore",
+    )
 
     # Overall threshold for passing validation
     pass_threshold: float = 0.65
@@ -159,6 +208,13 @@ class ValidationSettings(BaseSettings):
 
 class OrchestrationSettings(BaseSettings):
     """Orchestration and scheduling settings."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="ORCHESTRATION__",
+        extra="ignore",
+    )
 
     # Idempotency
     duplicate_window_minutes: int = Field(

@@ -80,7 +80,7 @@ class MarketAnomalyPipeline:
         self.clusterer = NewsClusterer(settings)
 
         # Initialize Phase 2 component
-        llm_client = LLMClient(settings)
+        llm_client = LLMClient()
         self.journalist = JournalistAgent(llm_client, settings)
 
         # Initialize Phase 3 component

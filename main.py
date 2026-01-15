@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
 
 import click
 from rich import box
@@ -242,6 +242,176 @@ async def detect(symbol, detect_all):
     except Exception as e:
         console.print(f"[red]Detection failed:[/red] {e}")
         logger.exception("Detection command failed")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--symbol", type=str, help="Trading symbol (e.g., BTC-USD)")
+@click.option("--all", "backfill_all", is_flag=True, help="Backfill all configured symbols")
+@click.option("--days", type=int, default=7, help="Number of days to backfill (default: 7)")
+@async_command
+async def backfill(symbol, backfill_all, days):
+    """Backfill historical price data from exchange APIs.
+
+    Fetches historical 1-minute candle data and stores it in the database.
+    Uses batch insertion for efficiency and skips duplicates automatically.
+
+    Examples:
+        mane backfill --symbol BTC-USD --days 7
+        mane backfill --all --days 30
+    """
+    # Validate arguments
+    if not symbol and not backfill_all:
+        console.print("[red]Error: Specify either --symbol or --all[/red]")
+        console.print("\nUsage:")
+        console.print("  mane backfill --symbol BTC-USD --days 7")
+        console.print("  mane backfill --all --days 7")
+        sys.exit(1)
+
+    if symbol and backfill_all:
+        console.print("[red]Error: Cannot use both --symbol and --all[/red]")
+        sys.exit(1)
+
+    if days <= 0:
+        console.print("[red]Error: --days must be positive[/red]")
+        sys.exit(1)
+
+    if days > 365:
+        console.print("[yellow]Warning: Large backfills may take significant time[/yellow]")
+        if not click.confirm("Continue?"):
+            sys.exit(0)
+
+    try:
+        # Initialize database
+        init_database(settings.database.url)
+
+        # Determine which client to use
+        from src.phase1_detector.data_ingestion import CoinbaseClient, BinanceClient
+
+        if settings.data_ingestion.primary_source == "coinbase":
+            client = CoinbaseClient(
+                api_key=settings.data_ingestion.coinbase_api_key,
+                api_secret=settings.data_ingestion.coinbase_api_secret,
+            )
+        else:
+            client = BinanceClient(
+                api_key=settings.data_ingestion.binance_api_key,
+                api_secret=settings.data_ingestion.binance_api_secret,
+            )
+
+        # Determine symbols to process
+        symbols = settings.detection.symbols if backfill_all else [symbol]
+
+        console.print(
+            f"\n[cyan]Starting backfill for {len(symbols)} symbol(s)...[/cyan]"
+        )
+        console.print(f"[dim]Source: {client.source_name}[/dim]")
+        console.print(f"[dim]Date range: {days} days[/dim]")
+        console.print(f"[dim]Granularity: 1 minute[/dim]\n")
+
+        # Calculate date range
+        end_time = datetime.now(UTC)
+        start_time = end_time - timedelta(days=days)
+
+        # Process each symbol with progress tracking
+        total_inserted = 0
+        total_fetched = 0
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            for sym in symbols:
+                task = progress.add_task(
+                    f"[cyan]Fetching {sym}...[/cyan]", total=None
+                )
+
+                try:
+                    # Fetch historical data
+                    prices = await client.get_historical_prices(
+                        symbol=sym,
+                        start_time=start_time,
+                        end_time=end_time,
+                        granularity_seconds=60,
+                    )
+
+                    total_fetched += len(prices)
+
+                    # Update progress
+                    progress.update(
+                        task,
+                        description=f"[cyan]Storing {sym} ({len(prices)} records)...[/cyan]",
+                    )
+
+                    # Store in database
+                    with get_db_context() as session:
+                        inserted = await client.store_prices_bulk(
+                            prices, session, batch_size=1000
+                        )
+                        total_inserted += inserted
+
+                    # Success message
+                    skipped = len(prices) - inserted
+                    progress.update(
+                        task,
+                        description=(
+                            f"[green]✓ {sym}[/green]: "
+                            f"{inserted} inserted, {skipped} skipped (duplicates)"
+                        ),
+                    )
+
+                    await asyncio.sleep(0.5)  # Brief pause for readability
+                    progress.remove_task(task)
+
+                except ValueError as e:
+                    progress.update(task, description=f"[red]✗ {sym}[/red]: {e}")
+                    await asyncio.sleep(1)
+                    progress.remove_task(task)
+                    continue
+
+                except ConnectionError as e:
+                    progress.update(
+                        task, description=f"[red]✗ {sym}[/red]: API connection failed"
+                    )
+                    logger.exception(f"Connection error for {sym}")
+                    await asyncio.sleep(1)
+                    progress.remove_task(task)
+                    continue
+
+                except Exception as e:
+                    progress.update(
+                        task, description=f"[red]✗ {sym}[/red]: {str(e)[:50]}"
+                    )
+                    logger.exception(f"Backfill failed for {sym}")
+                    await asyncio.sleep(1)
+                    progress.remove_task(task)
+                    continue
+
+        # Close client
+        await client.close()
+
+        # Summary
+        console.print()
+        console.print(
+            Panel(
+                f"[bold]Fetched:[/bold] {total_fetched:,} records\n"
+                f"[bold]Inserted:[/bold] {total_inserted:,} new records\n"
+                f"[bold]Skipped:[/bold] {total_fetched - total_inserted:,} duplicates\n"
+                f"[bold]Symbols:[/bold] {len(symbols)}",
+                title="[green]Backfill Complete[/green]",
+                border_style="green",
+                box=box.ROUNDED,
+            )
+        )
+
+    except OperationalError:
+        console.print("[red]Database connection failed[/red]")
+        console.print("\n[yellow]Did you run 'mane init-db'?[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Backfill failed:[/red] {e}")
+        logger.exception("Backfill command failed")
         sys.exit(1)
 
 
