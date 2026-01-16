@@ -7,57 +7,41 @@ MANE solves a critical problem in quantitative finance: dashboards tell you *wha
 **How it works:**
 1. **Statistical Detection** - Z-score, Bollinger Bands, volume spikes (deterministic)
 2. **Time-Windowed News** - Links anomalies to news within ±30 minutes (causal filtering)
-3. **AI Investigation** - LLM agent with tools investigates and writes 2-sentence narratives
-4. **Validation** - Rules + Judge LLM verify plausibility (or return "Unknown")
+3. **AI Investigation** - LLM agent with tools investigates and writes narratives
+4. **Validation** - Rule-based + Judge LLM verify plausibility (or return "Unknown")
 
 > **Architecture Philosophy**: Workflow first (predictable), Agent second (reasoning)
-
-## Status
-
-**✅ Phase 1 Complete**: Statistical detectors (Z-score, Bollinger, volume, combined) · PostgreSQL schema · Settings management · Price ingestion (Coinbase, Binance) · News aggregation (CryptoPanic, Reddit, NewsAPI) · News clustering (sentence-transformers + HDBSCAN)
-
-**✅ Phase 2 Complete**: LLM client (LiteLLM wrapper) · Agent tools (5 tools: verify_timestamp, sentiment_check, search_historical, market_context, social_sentiment) · Journalist agent with tool loop · Narrative generation with metadata tracking
-
-**✅ Phase 3 Complete**: Validation engine with 6 validators (5 rule-based + 1 LLM) · Weighted score aggregation · Parallel execution · Conditional LLM validation · Database persistence
-
-**✅ ALL PHASES COMPLETE**: End-to-end pipeline working (Phase 1→2→3) · CLI interface with 6 commands · Scheduler for continuous monitoring · Integration tests
-
-**Progress**: 17/17 components complete (100%) · 165 tests passing (100% pass rate)
 
 ## Quick Start
 
 **Prerequisites**: Python 3.12+ · [uv](https://github.com/astral-sh/uv) · PostgreSQL 14+ · LLM API key (Anthropic/OpenAI/DeepSeek)
 
 ```bash
-# Clone and setup
+# Setup
 git clone https://github.com/your-org/market-anomaly-narrative-engine.git
 cd market-anomaly-narrative-engine
-uv venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# Install dependencies
+uv venv && source .venv/bin/activate
 uv sync
 
-# Setup database (Docker or local)
+# Database
 docker run --name mane-postgres -e POSTGRES_PASSWORD=yourpass -p 5432:5432 -d postgres:14
 
-# Configure environment
+# Configure (.env file)
 cp .env.example .env
-# Edit .env with: DATABASE__PASSWORD, ANTHROPIC_API_KEY (or OPENAI_API_KEY)
+# Edit with: DATABASE__PASSWORD, ANTHROPIC_API_KEY, NEWS__CRYPTOPANIC_API_KEY, etc.
 
-# Initialize database
+# Initialize & populate database
 mane init-db
-
-# Backfill historical data (NEW - populate price history)
-mane backfill --symbol BTC-USD --days 7   # Backfill 7 days of 1-minute data
-mane backfill --all --days 30             # Backfill 30 days for all symbols
+mane backfill --symbol BTC-USD --days 7   # Fetch historical price data
 
 # Run detection
-mane detect --symbol BTC-USD     # Detect anomalies for Bitcoin
-mane detect --all                # Detect for all configured symbols
-mane serve                       # Start continuous monitoring scheduler
-mane list-narratives --limit 10  # View recent narratives (table format)
-mane list-narratives --format json --validated-only  # JSON output, validated only
-mane metrics                     # View performance metrics
+mane detect --symbol BTC-USD              # Single symbol
+mane detect --all                         # All configured symbols
+mane serve                                # Continuous monitoring
+
+# View results
+mane list-narratives --limit 10
+mane metrics
 ```
 
 ## Architecture
@@ -116,99 +100,61 @@ mane metrics                     # View performance metrics
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Phase 3: Validation Architecture
-
-**Hybrid Validation** (Rule-based + LLM):
-1. **Rule Validators** (parallel execution, ~100ms):
-   - `SentimentMatchValidator` - Sentiment aligns with price direction
-   - `TimingCoherenceValidator` - News preceded anomaly (causal)
-   - `MagnitudeCoherenceValidator` - Language matches z-score magnitude
-   - `ToolConsistencyValidator` - Tool results are consistent
-   - `NarrativeQualityValidator` - Format, hedging, "Unknown" detection
-
-2. **Judge LLM Validator** (conditional, 2-5s):
-   - Only called if rule validators pass threshold (0.5 default)
-   - Assesses plausibility, causality, coherence (1-5 scale)
-   - Saves 80% of LLM calls by skipping obvious failures
-
-3. **Weighted Aggregation**:
-   - Each validator has configurable weight (timing: 1.5, sentiment: 1.2, etc.)
-   - Confidence-weighted scoring
-   - Pass threshold: 0.65 (configurable)
-   - Critical validator override (timing/sentiment failures → reject)
-
-**Result**: `validated=True` + `validation_passed=True/False` + `validation_reason` → Database
-
-### Directory Structure
+### Key Components
 
 ```
 src/
-├── phase1_detector/        # ✅ Statistical detection, news aggregation, clustering
-│   ├── anomaly_detection/  # ✅ Z-score, Bollinger, volume, combined detectors
-│   ├── data_ingestion/     # ✅ Coinbase & Binance API clients
-│   ├── news_aggregation/   # ✅ CryptoPanic, Reddit, NewsAPI clients
-│   └── clustering/         # ✅ sentence-transformers + HDBSCAN
-├── phase2_journalist/      # ✅ LLM agent with 5 tools + narrative generation
-│   ├── agent.py            # ✅ JournalistAgent with tool loop orchestration
-│   ├── tools/              # ✅ 5 agent tools (verify_timestamp, sentiment_check, etc.)
-│   └── prompts/            # ✅ System prompts and context templates
-├── phase3_skeptic/         # ✅ Validation engine (rule-based + Judge LLM)
-│   ├── validator.py        # ✅ ValidationEngine orchestrator
-│   ├── validators/         # ✅ 6 validators (sentiment, timing, magnitude, tools, quality, LLM)
-│   └── prompts/            # ✅ Judge LLM system prompt and context templates
-├── database/               # ✅ SQLAlchemy ORM (prices → anomalies → narratives)
-├── llm/                    # ✅ LiteLLM wrapper (OpenAI, Anthropic, DeepSeek, Ollama)
-├── orchestration/          # ✅ Pipeline coordinator & scheduler
-│   ├── pipeline.py         # ✅ MarketAnomalyPipeline (8-step Phase 1→2→3 workflow)
-│   └── scheduler.py        # ✅ AnomalyDetectionScheduler (continuous monitoring)
-└── cli/                    # ✅ CLI utilities
-    └── utils.py            # ✅ Async command support, signal handling
+├── phase1_detector/        # Statistical detection, news aggregation, clustering
+│   ├── anomaly_detection/  # Z-score, Bollinger, volume, combined detectors
+│   ├── data_ingestion/     # Coinbase & Binance API clients
+│   ├── news_aggregation/   # CryptoPanic, Reddit, NewsAPI
+│   └── clustering/         # sentence-transformers + HDBSCAN
+├── phase2_journalist/      # LLM agent with tool loop
+│   ├── agent.py            # JournalistAgent orchestrator
+│   ├── tools/              # 5 agent tools (verify_timestamp, sentiment_check, etc.)
+│   └── prompts/            # System prompts
+├── phase3_skeptic/         # Validation engine
+│   ├── validator.py        # ValidationEngine orchestrator
+│   ├── validators/         # 6 validators (rule-based + LLM)
+│   └── prompts/            # Judge LLM prompts
+├── database/               # SQLAlchemy ORM (prices → anomalies → narratives)
+├── llm/                    # LiteLLM wrapper (multi-provider support)
+├── orchestration/          # Pipeline coordinator & scheduler
+└── cli/                    # CLI utilities
 ```
 
 ## Configuration
 
-**Database Schema**: `prices` (time-series data) → `anomalies` (detections with metrics) → `narratives` (explanations) + `news_articles` (clustered by anomaly). See `src/database/models.py` for full schema.
+**Database Schema**: `prices` → `anomalies` → `narratives` + `news_articles` (see `src/database/models.py`)
 
-**Environment Variables** (`.env`):
+**Key Environment Variables** (`.env`):
 ```bash
 # Database
-DATABASE__PASSWORD=yourpass           # PostgreSQL password
+DATABASE__PASSWORD=yourpass
 
-# LLM (Phase 2 complete)
-LLM__PROVIDER=anthropic              # openai, anthropic, deepseek, or ollama
-LLM__MODEL=claude-3-5-haiku-20241022 # Model to use
+# LLM Provider
+LLM__PROVIDER=anthropic              # openai, anthropic, deepseek, ollama
+LLM__MODEL=claude-3-5-haiku-20241022
 ANTHROPIC_API_KEY=sk-ant-...         # or OPENAI_API_KEY, DEEPSEEK_API_KEY
 
-# Detection thresholds
-DETECTION__Z_SCORE_THRESHOLD=3.0     # 3-sigma events
-DETECTION__NEWS_WINDOW_MINUTES=30    # News search ±30min
-
-# News sources (Phase 1 complete)
+# News Sources
 NEWS__CRYPTOPANIC_API_KEY=your_key
 NEWS__REDDIT_CLIENT_ID=your_id
 NEWS__REDDIT_CLIENT_SECRET=your_secret
-NEWS__NEWSAPI_API_KEY=your_key       # Optional third source
 
-# Clustering
-CLUSTERING__EMBEDDING_MODEL=all-MiniLM-L6-v2  # sentence-transformers model
-CLUSTERING__MIN_CLUSTER_SIZE=2                 # Minimum articles per cluster
-
-# Validation (Phase 3 complete)
-VALIDATION__PASS_THRESHOLD=0.65               # Overall pass threshold
-VALIDATION__JUDGE_LLM_ENABLED=true            # Enable LLM validator
-VALIDATION__PARALLEL_VALIDATION=true          # Run rule validators in parallel
-VALIDATION__SENTIMENT_MATCH_WEIGHT=1.2        # Validator weights (higher = more important)
-VALIDATION__TIMING_COHERENCE_WEIGHT=1.5       # Timing is most critical
-VALIDATION__JUDGE_LLM_MIN_TRIGGER_SCORE=0.5   # Only call LLM if rules pass this
+# Detection & Validation
+DETECTION__Z_SCORE_THRESHOLD=3.0     # 3-sigma events
+DETECTION__NEWS_WINDOW_MINUTES=30    # News search window
+VALIDATION__PASS_THRESHOLD=0.65      # Validation threshold
 ```
 
 **Per-Asset Tuning** (`config/thresholds.yaml`):
 ```yaml
 asset_specific_thresholds:
   BTC-USD:
-    z_score: 3.5  # Stable assets need higher threshold
+    z_score: 3.5  # Higher threshold for stable assets
   DOGE-USD:
-    z_score: 2.5  # Volatile meme coins need lower threshold
+    z_score: 2.5  # Lower threshold for volatile assets
 ```
 
 ## Development
@@ -217,262 +163,76 @@ asset_specific_thresholds:
 # Install dev dependencies
 uv pip install -e ".[dev]"
 
-# Run tests (165+ tests, 100% pass rate)
-pytest                                            # All tests
-pytest --cov=src --cov-report=html               # With coverage
-pytest tests/unit/orchestration/                 # Orchestration tests (40 tests)
-pytest tests/integration/                        # Integration tests (5 tests)
-pytest tests/unit/phase1/test_statistical.py     # Specific file
+# Testing
+pytest                          # Run all tests
+pytest --cov=src               # With coverage
+pytest tests/unit/phase1/      # Specific directory
 
 # Code quality
-black .              # Format (line length 100)
-ruff check .         # Lint
-mypy src/            # Type checking
+black .                        # Format (line length 100)
+ruff check .                   # Lint
+mypy src/                      # Type checking
 
 # Database migrations
-alembic revision --autogenerate -m "description"  # Create migration
-alembic upgrade head                              # Apply migrations
-alembic downgrade -1                              # Rollback
+alembic revision --autogenerate -m "description"
+alembic upgrade head
 ```
 
-## CLI Usage
-
-### Initialize Database
+## CLI Commands
 
 ```bash
-# Create database tables
-mane init-db
+# Database setup
+mane init-db                              # Initialize database schema
+mane backfill --symbol BTC-USD --days 7   # Backfill price history (1-min candles)
+mane backfill --all --days 30             # Backfill all configured symbols
+
+# Detection
+mane detect --symbol BTC-USD              # Detect anomalies for single symbol
+mane detect --all                         # Detect for all symbols
+mane serve                                # Start continuous monitoring scheduler
+
+# Results
+mane list-narratives --limit 10           # View recent narratives
+mane list-narratives --validated-only     # Show only validated narratives
+mane metrics                              # Display performance metrics
 ```
 
-### Backfill Historical Data (NEW)
-
-```bash
-# Backfill 7 days of 1-minute candle data for Bitcoin
-mane backfill --symbol BTC-USD --days 7
-
-# Backfill 30 days for all configured symbols
-mane backfill --all --days 30
-
-# Example output:
-# Starting backfill for 1 symbol(s)...
-# Source: coinbase
-# Date range: 7 days
-# Granularity: 1 minute
-#
-# ⠏ Storing BTC-USD (10,080 records)...
-# ✓ BTC-USD: 10,080 inserted, 0 skipped (duplicates)
-#
-# ╭─────────────── Backfill Complete ───────────────╮
-# │ Fetched: 10,080 records                         │
-# │ Inserted: 10,080 new records                    │
-# │ Skipped: 0 duplicates                           │
-# │ Symbols: 1                                      │
-# ╰─────────────────────────────────────────────────╯
-```
-
-**Why backfill?** The detection pipeline requires at least 30 minutes of price history. Backfilling populates your database so you can immediately run anomaly detection without waiting for real-time data collection.
-
-**Features**:
-- Fetches 1-minute candles from exchange APIs (Coinbase or Binance)
-- Efficient batch insertion (10-100x faster than individual inserts)
-- Idempotent (safe to re-run - skips duplicates automatically)
-- Progress tracking with real-time status updates
-- Rate-limited to respect exchange API limits
-
-### Run Detection
-
-```bash
-# Detect anomalies for a specific symbol
-mane detect --symbol BTC-USD
-
-# Example output:
-# ╭─────────────────────── Anomaly Detected: BTC-USD ───────────────────────╮
-# │ Type: price_drop                                                         │
-# │ Confidence: 0.89                                                         │
-# │ Price Change: -5.20%                                                     │
-# │ Z-Score: -3.87                                                           │
-# │                                                                          │
-# │ Narrative:                                                               │
-# │ Bitcoin dropped 5.2% following SEC announcement of stricter             │
-# │ cryptocurrency regulations. The negative sentiment across social        │
-# │ media amplified the sell-off.                                           │
-# │                                                                          │
-# │ Validation: ✓ Passed (score: 0.78)                                      │
-# ╰──────────────────────────────────────────────────────────────────────────╯
-
-# Detect for all configured symbols
-mane detect --all
-```
-
-### Start Continuous Monitoring
-
-```bash
-# Start scheduler (runs until Ctrl+C)
-mane serve
-
-# Example output:
-# ╭────────────── Market Anomaly Narrative Engine ──────────────╮
-# │ Status: Starting scheduler...                               │
-# │ Monitoring: 5 symbols                                       │
-# │ Poll Interval: 300 seconds                                  │
-# │ Press Ctrl+C to stop                                        │
-# ╰─────────────────────────────────────────────────────────────╯
-#
-# [14:30:00] Storing prices for 5 symbols...
-# [14:35:00] Running detection cycle...
-# [14:35:02] BTC-USD: No anomaly detected
-# [14:35:04] ETH-USD: Anomaly detected (narrative generated)
-```
-
-### View Results
-
-```bash
-# View recent narratives (table format)
-mane list-narratives --limit 10
-
-# Filter by symbol and validation status
-mane list-narratives --symbol BTC-USD --validated-only
-
-# JSON output for programmatic use
-mane list-narratives --format json --limit 5
-```
-
-### View Metrics
-
-```bash
-# Display scheduler performance metrics
-mane metrics
-
-# JSON format
-mane metrics --format json
-```
-
-## Python API Examples
-
-### Detecting Anomalies
+## Python API Example
 
 ```python
-import pandas as pd
-from src.phase1_detector.anomaly_detection.statistical import AnomalyDetector
-
-prices = pd.DataFrame({
-    'timestamp': [...],
-    'price': [45000, 45100, 45050, 47000, 45200],  # Spike at index 3
-    'volume': [1000, 1100, 1050, 5000, 1200],      # Volume spike
-    'symbol': ['BTC-USD'] * 5
-})
-
-detector = AnomalyDetector()
-anomalies = detector.detect_all(prices)
-
-# Output: Anomaly(type='combined', price_change=4.40%, z_score=3.87, confidence=0.89)
-```
-
-### Clustering News Articles
-
-```python
-from src.phase1_detector.clustering import NewsClusterer
-from src.phase1_detector.news_aggregation import NewsAggregator
-from datetime import datetime
-
-# Fetch news around anomaly
-aggregator = NewsAggregator()
-articles = await aggregator.get_news_for_anomaly(
-    symbols=["BTC-USD"],
-    anomaly_time=datetime.now(),
-    window_minutes=30
-)
-
-# Cluster similar articles
-clusterer = NewsClusterer()
-result = clusterer.cluster_for_anomaly(anomaly_id, articles)
-
-print(f"Found {result['n_clusters']} clusters:")
-for cluster_id, indices in result['clusters'].items():
-    if cluster_id != -1:  # Skip noise
-        print(f"  Cluster {cluster_id}: {len(indices)} articles")
-```
-
-### Generating Narratives with AI
-
-```python
-from src.phase2_journalist import JournalistAgent
+from src.orchestration.pipeline import MarketAnomalyPipeline
 from src.database.connection import get_db_session
 
-# Generate AI-powered narrative for an anomaly
+# Run end-to-end pipeline
 with get_db_session() as session:
-    agent = JournalistAgent(session=session)
+    pipeline = MarketAnomalyPipeline(session=session)
 
-    # Agent automatically uses tools to investigate
-    narrative = await agent.generate_narrative(anomaly, news_articles)
+    # Detect anomaly → Generate narrative → Validate
+    result = await pipeline.run_for_symbol("BTC-USD")
 
-    print(narrative.narrative_text)
-    # Output: "Bitcoin dropped 5.2% following SEC announcement of stricter
-    # cryptocurrency regulations. The negative sentiment across social media
-    # amplified the sell-off."
-
-    print(f"Tools used: {narrative.tools_used}")
-    # ['verify_timestamp', 'sentiment_check', 'check_social_sentiment']
-
-    print(f"Confidence: {narrative.confidence_score:.2f}")
-    print(f"Generation time: {narrative.generation_time_seconds:.2f}s")
+    if result.anomaly_detected:
+        print(f"Anomaly: {result.anomaly.type} ({result.anomaly.confidence:.2f})")
+        print(f"Narrative: {result.narrative.narrative_text}")
+        print(f"Validated: {result.narrative.validation_passed}")
 ```
 
-### Validating Narratives
-
-```python
-from src.phase3_skeptic import ValidationEngine
-from src.database.connection import get_db_session
-
-# Validate a narrative with rule-based + LLM validation
-with get_db_session() as session:
-    engine = ValidationEngine(session=session)
-
-    # Runs 5 rule validators in parallel (~100ms)
-    # Then conditionally runs Judge LLM if rules pass threshold
-    result = await engine.validate_narrative(narrative)
-
-    if result.validation_passed:
-        print(f"Narrative validated (score: {result.aggregate_score:.2f})")
-        print(f"   Reason: {result.validation_reason}")
-    else:
-        print(f"Validation failed (score: {result.aggregate_score:.2f})")
-        print(f"   Reason: {result.validation_reason}")
-
-    # Inspect individual validator results
-    for name, output in result.validator_results.items():
-        if output.success:
-            print(f"   {name}: {'✓' if output.passed else '✗'} (score: {output.score:.2f})")
-            print(f"      {output.reasoning}")
-
-    # Output example:
-    # ✅ Narrative validated (score: 0.78)
-    #    Reason: Validation passed (score: 0.78, threshold: 0.65)
-    #    sentiment_match: ✓ (score: 1.00)
-    #       Positive sentiment (0.75) aligns with price spike
-    #    timing_coherence: ✓ (score: 0.90)
-    #       3/4 articles are pre-event (75.0%) - strong causal coherence
-    #    judge_llm: ✓ (score: 0.83)
-    #       Strong causal link with good timing (plausibility: 4, causality: 5, coherence: 4)
-```
+For individual component usage, see `examples/` directory.
 
 ## Cost & Performance
 
 **Monthly costs** (20 cryptos, 200 narratives/day): $20-100
-- Price & News APIs: Free (Coinbase, CryptoPanic, Reddit)
-- LLM costs (Anthropic Haiku):
-  - Narrative generation: $20-40/month (~200 narratives/day)
-  - Validation (Judge LLM): $10-20/month (~80% skip via conditional execution)
+- APIs: Free (Coinbase, CryptoPanic, Reddit)
+- LLM: $30-60 (Anthropic Haiku recommended for cost efficiency)
 - PostgreSQL: Free (self-hosted) or $25 (managed)
 
 **Performance**:
-- Anomaly detection: <50ms (deterministic)
-- News clustering: ~200ms (embeddings + HDBSCAN)
-- Narrative generation: 2-5 seconds (LLM + tools)
-- Validation: 100ms (rules only) or 2-5s (rules + Judge LLM)
-- **End-to-end pipeline**: 5-15 seconds per anomaly
+- Anomaly detection: <50ms
+- News clustering: ~200ms
+- Narrative generation: 2-5s (LLM + tool loop)
+- Validation: 100ms (rules) or 2-5s (rules + Judge LLM)
+- **End-to-end**: 5-15 seconds per anomaly
 
-**Optimization**: Use Haiku (10x cheaper than GPT-4) · Cache embeddings · Parallel validators (~5x speedup) · Conditional LLM (saves 80% of validation calls) · Reduce polling during low volatility
+**Key Optimizations**: Conditional LLM validation (80% cost reduction) · Parallel rule validators · Cached embeddings · Haiku model (10x cheaper than GPT-4)
 
 ## Contributing
 
