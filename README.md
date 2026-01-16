@@ -218,25 +218,7 @@ with get_db_session() as session:
 
 For individual component usage, see `examples/` directory.
 
-## Cost & Performance
-
-### Monthly Cost Estimates
-
-**Development/Portfolio (Free APIs)**:
-- News APIs: **Free** (CryptoPanic Developer + NewsAPI Developer)
-- Price Data: Free (Coinbase/Binance public APIs)
-- LLM: $10-30 (Anthropic Haiku recommended)
-- PostgreSQL: Free (self-hosted) or $0-10 (managed free tier)
-- **Total**: $10-40/month (24-hour narrative delay)
-
-**Production (Real-Time)**:
-- News APIs: $29-478/month (CryptoPanic Pro + optional NewsAPI)
-- Price Data: Free (Coinbase/Binance public APIs)
-- LLM: $30-60 (200 narratives/day, Haiku model)
-- PostgreSQL: $0-25 (self-hosted or managed)
-- **Total**: $60-563/month (real-time narratives)
-
-### Performance
+## Performance
 
 - Anomaly detection: <50ms
 - News clustering: ~200ms
