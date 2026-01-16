@@ -16,6 +16,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     Index,
+    UniqueConstraint,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -49,7 +50,10 @@ class Price(Base):
     source = Column(String(20))  # coinbase, binance
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    __table_args__ = (Index("idx_symbol_timestamp", "symbol", "timestamp"),)
+    __table_args__ = (
+        UniqueConstraint("symbol", "timestamp", name="uq_symbol_timestamp"),
+        Index("idx_symbol_timestamp", "symbol", "timestamp"),
+    )
 
     def __repr__(self):
         return f"<Price(symbol={self.symbol}, price={self.price}, timestamp={self.timestamp})>"

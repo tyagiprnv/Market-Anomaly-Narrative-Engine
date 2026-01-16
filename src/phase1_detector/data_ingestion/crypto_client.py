@@ -240,7 +240,7 @@ class CryptoClient(ABC):
 
             # PostgreSQL-specific bulk insert with ON CONFLICT
             stmt = insert(Price).values(batch)
-            stmt = stmt.on_conflict_do_nothing(index_elements=["symbol", "timestamp"])
+            stmt = stmt.on_conflict_do_nothing(constraint="uq_symbol_timestamp")
 
             result = session.execute(stmt)
             inserted_count += result.rowcount
