@@ -9,6 +9,7 @@ from src.phase1_detector.news_aggregation.news_client import NewsClient
 from src.phase1_detector.news_aggregation.cryptopanic_client import CryptoPanicClient
 from src.phase1_detector.news_aggregation.reddit_client import RedditClient
 from src.phase1_detector.news_aggregation.newsapi_client import NewsAPIClient
+from src.phase1_detector.news_aggregation.grok_client import GrokClient
 from src.phase1_detector.news_aggregation.models import NewsArticle
 
 
@@ -27,6 +28,7 @@ class NewsAggregator:
         reddit_client_id: str | None = None,
         reddit_client_secret: str | None = None,
         newsapi_key: str | None = None,
+        grok_key: str | None = None,
     ):
         """Initialize news aggregator with API credentials.
 
@@ -35,6 +37,7 @@ class NewsAggregator:
             reddit_client_id: Reddit client ID (defaults to settings)
             reddit_client_secret: Reddit client secret (defaults to settings)
             newsapi_key: NewsAPI key (defaults to settings)
+            grok_key: Grok API key for X/Twitter data (optional, defaults to settings)
         """
         self.clients: list[NewsClient] = []
 
@@ -59,6 +62,11 @@ class NewsAggregator:
         news_key = newsapi_key or settings.news.newsapi_api_key
         if news_key:
             self.clients.append(NewsAPIClient(api_key=news_key))
+
+        # Initialize Grok client (optional - X/Twitter data)
+        grok_api_key = grok_key or settings.news.grok_api_key
+        if grok_api_key:
+            self.clients.append(GrokClient(api_key=grok_api_key))
 
         if not self.clients:
             raise ValueError("At least one news API key must be provided")

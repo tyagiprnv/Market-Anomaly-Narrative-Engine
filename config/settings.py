@@ -135,6 +135,7 @@ class NewsSettings(BaseSettings):
     reddit_client_id: str
     reddit_client_secret: str
     reddit_user_agent: str = "MarketAnomalyEngine/0.1.0"
+    grok_api_key: str | None = None
 
 
 class ClusteringSettings(BaseSettings):

@@ -178,3 +178,68 @@ class NewsAPIArticle(BaseModel):
             summary=summary,
             symbols=symbols or [],
         )
+
+
+class GrokPost(BaseModel):
+    """X/Twitter post from Grok API x_search tool.
+
+    Attributes:
+        post_id: Unique X/Twitter post ID
+        author_handle: Author's X/Twitter handle (optional)
+        text: Post content/text
+        url: URL to the X/Twitter post
+        created_at: Post creation timestamp
+        likes: Number of likes (favorites)
+        retweets: Number of retweets
+        replies: Number of replies
+    """
+
+    post_id: str
+    author_handle: str | None = None
+    text: str
+    url: str
+    created_at: datetime
+    likes: int = 0
+    retweets: int = 0
+    replies: int = 0
+
+    def to_news_article(self, symbols: list[str] | None = None) -> NewsArticle:
+        """Convert X/Twitter post to NewsArticle.
+
+        Sentiment is calculated from engagement metrics:
+        - Higher engagement (likes/total) = more positive sentiment
+        - Normalized to range [-1, 1]
+        - Formula: (likes / total_engagement) * 2 - 1
+
+        Args:
+            symbols: List of symbols to associate with this article
+
+        Returns:
+            NewsArticle instance
+        """
+        # Calculate engagement-based sentiment
+        total_engagement = self.likes + self.retweets + self.replies
+        if total_engagement > 0:
+            # Normalize likes ratio to [-1, 1] range
+            # Assumes likes are the primary positive signal
+            sentiment = (self.likes / total_engagement) * 2 - 1
+            # Clamp to valid range
+            sentiment = max(-1.0, min(1.0, sentiment))
+        else:
+            sentiment = 0.0
+
+        # Create summary with engagement stats
+        summary = (
+            f"{self.text[:300]}... "
+            f"(Engagement: {self.likes} likes, {self.retweets} retweets, {self.replies} replies)"
+        )
+
+        return NewsArticle(
+            source="grok",
+            title=self.text[:100] if len(self.text) > 100 else self.text,
+            url=self.url,
+            published_at=self.created_at,
+            summary=summary,
+            sentiment=sentiment,
+            symbols=symbols or [],
+        )

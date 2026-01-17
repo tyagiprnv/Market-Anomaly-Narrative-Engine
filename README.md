@@ -107,7 +107,7 @@ src/
 ├── phase1_detector/        # Statistical detection, news aggregation, clustering
 │   ├── anomaly_detection/  # Z-score, Bollinger, volume, combined detectors
 │   ├── data_ingestion/     # Coinbase & Binance API clients
-│   ├── news_aggregation/   # CryptoPanic, Reddit, NewsAPI
+│   ├── news_aggregation/   # CryptoPanic, Reddit, NewsAPI, Grok (X/Twitter)
 │   └── clustering/         # sentence-transformers + HDBSCAN
 ├── phase2_journalist/      # LLM agent with tool loop
 │   ├── agent.py            # JournalistAgent orchestrator
@@ -141,6 +141,7 @@ ANTHROPIC_API_KEY=sk-ant-...         # or OPENAI_API_KEY, DEEPSEEK_API_KEY
 NEWS__CRYPTOPANIC_API_KEY=your_key
 NEWS__REDDIT_CLIENT_ID=your_id
 NEWS__REDDIT_CLIENT_SECRET=your_secret
+NEWS__GROK_API_KEY=xai-your_key         # Optional: X/Twitter data via xAI
 
 # Detection & Validation
 DETECTION__Z_SCORE_THRESHOLD=3.0     # 3-sigma events
