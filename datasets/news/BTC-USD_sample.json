@@ -1,0 +1,96 @@
+{
+  "symbol": "BTC-USD",
+  "date": "2024-03-14",
+  "articles": [
+    {
+      "source": "coindesk",
+      "title": "Bitcoin Surges Past $73,000 as ETF Inflows Hit Record High",
+      "url": "https://www.coindesk.com/markets/2024/03/14/bitcoin-surges-past-73000",
+      "published_at": "2024-03-14T14:30:00Z",
+      "summary": "Bitcoin reached a new all-time high above $73,000 as institutional investors poured record amounts into spot Bitcoin ETFs. The rally marks a significant milestone in cryptocurrency adoption.",
+      "sentiment": 0.85,
+      "symbols": ["BTC-USD"]
+    },
+    {
+      "source": "cointelegraph",
+      "title": "Institutional Demand Drives Bitcoin to New Heights",
+      "url": "https://cointelegraph.com/news/institutional-demand-bitcoin-rally",
+      "published_at": "2024-03-14T14:45:00Z",
+      "summary": "Record ETF inflows of $1.2 billion in a single day fuel Bitcoin's momentum as Wall Street embraces digital assets.",
+      "sentiment": 0.75,
+      "symbols": ["BTC-USD"]
+    },
+    {
+      "source": "decrypt",
+      "title": "Bitcoin ETF Flows Shatter Previous Records",
+      "url": "https://decrypt.co/220000/bitcoin-etf-flows-record",
+      "published_at": "2024-03-14T15:00:00Z",
+      "summary": "BlackRock's iShares Bitcoin Trust alone saw over $500 million in inflows, contributing to Bitcoin's historic rally.",
+      "sentiment": 0.70,
+      "symbols": ["BTC-USD"]
+    },
+    {
+      "source": "bitcoinmagazine",
+      "title": "Bitcoin Price Discovery Continues as ATH Approaches $75K",
+      "url": "https://bitcoinmagazine.com/markets/bitcoin-price-discovery-75k",
+      "published_at": "2024-03-14T15:15:00Z",
+      "summary": "Market analysts predict Bitcoin could reach $75,000 by end of month as bullish momentum accelerates with strong institutional support.",
+      "sentiment": 0.80,
+      "symbols": ["BTC-USD"]
+    },
+    {
+      "source": "theblock",
+      "title": "Bitcoin Dominance Rises to 54% as Altcoins Lag",
+      "url": "https://www.theblock.co/post/280000/bitcoin-dominance-54-percent",
+      "published_at": "2024-03-14T15:30:00Z",
+      "summary": "Bitcoin's market dominance increases as capital flows into BTC ahead of altcoins, signaling strong confidence in the flagship cryptocurrency.",
+      "sentiment": 0.65,
+      "symbols": ["BTC-USD"]
+    },
+    {
+      "source": "rss",
+      "title": "Analysts: Bitcoin ETF Approval Marks Turning Point for Crypto",
+      "url": "https://cryptonews.example.com/btc-etf-turning-point",
+      "published_at": "2024-03-14T14:00:00Z",
+      "summary": "Industry experts say the approval and success of Bitcoin ETFs represents a watershed moment for mainstream cryptocurrency adoption.",
+      "sentiment": 0.90,
+      "symbols": ["BTC-USD"]
+    },
+    {
+      "source": "coindesk",
+      "title": "Trading Volume Spikes as Bitcoin Breaks Through Resistance",
+      "url": "https://www.coindesk.com/markets/2024/03/14/bitcoin-trading-volume",
+      "published_at": "2024-03-14T14:20:00Z",
+      "summary": "Bitcoin trading volumes exceeded $50 billion across major exchanges as the cryptocurrency broke through key resistance levels.",
+      "sentiment": 0.70,
+      "symbols": ["BTC-USD"]
+    },
+    {
+      "source": "cointelegraph",
+      "title": "Long-Term Bitcoin Holders Remain Steady Despite Price Surge",
+      "url": "https://cointelegraph.com/news/bitcoin-holders-hodl-surge",
+      "published_at": "2024-03-14T15:45:00Z",
+      "summary": "On-chain data shows long-term Bitcoin holders are not selling despite the price rally, indicating strong conviction in higher prices ahead.",
+      "sentiment": 0.75,
+      "symbols": ["BTC-USD"]
+    },
+    {
+      "source": "decrypt",
+      "title": "Bitcoin Mining Difficulty Adjusts Upward Amid Price Rally",
+      "url": "https://decrypt.co/220100/bitcoin-mining-difficulty-increase",
+      "published_at": "2024-03-14T16:00:00Z",
+      "summary": "Bitcoin's mining difficulty increased by 3.5% as hashrate reaches new all-time highs following the price surge.",
+      "sentiment": 0.60,
+      "symbols": ["BTC-USD"]
+    },
+    {
+      "source": "rss",
+      "title": "Retail Investors Return to Bitcoin as FOMO Intensifies",
+      "url": "https://cryptonews.example.com/retail-fomo-bitcoin",
+      "published_at": "2024-03-14T16:15:00Z",
+      "summary": "Cryptocurrency exchanges report surge in new account registrations as retail investors rush to participate in Bitcoin's rally.",
+      "sentiment": 0.65,
+      "symbols": ["BTC-USD"]
+    }
+  ]
+}
