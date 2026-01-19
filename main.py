@@ -129,14 +129,25 @@ def init_db(drop_existing):
 @cli.command()
 @click.option("--symbol", type=str, help="Trading symbol (e.g., BTC-USD)")
 @click.option("--all", "detect_all", is_flag=True, help="Run for all configured symbols")
+@click.option(
+    "--news-mode",
+    type=click.Choice(["live", "replay", "hybrid"]),
+    help="News aggregation mode (live=RSS/Reddit/Grok, replay=historical datasets, hybrid=both)",
+)
 @async_command
-async def detect(symbol, detect_all):
+async def detect(symbol, detect_all, news_mode):
     """Run anomaly detection pipeline for symbol(s).
 
     Executes the full Phase 1 → 2 → 3 pipeline:
     - Phase 1: Detect anomaly, fetch and cluster news
     - Phase 2: Generate narrative explanation
     - Phase 3: Validate narrative quality
+
+    \b
+    News Modes:
+      live   - RSS feeds + Reddit + Grok (all free, 5-10 min delay)
+      replay - Historical JSON datasets (deterministic, cost-free demos)
+      hybrid - Both live and replay sources
     """
     # Validate arguments
     if not symbol and not detect_all:
@@ -154,8 +165,8 @@ async def detect(symbol, detect_all):
         # Initialize database
         init_database(settings.database.url)
 
-        # Create pipeline
-        pipeline = MarketAnomalyPipeline(settings)
+        # Create pipeline with news mode
+        pipeline = MarketAnomalyPipeline(settings, news_mode=news_mode)
 
         # Determine symbols to process
         symbols = settings.detection.symbols if detect_all else [symbol]
@@ -415,10 +426,145 @@ async def backfill(symbol, backfill_all, days):
         sys.exit(1)
 
 
+@cli.command("backfill-news")
+@click.option("--symbol", required=True, help="Trading symbol (e.g., BTC-USD)")
+@click.option("--start-date", required=True, help="Start date (YYYY-MM-DD)")
+@click.option("--end-date", required=True, help="End date (YYYY-MM-DD)")
+@click.option(
+    "--source",
+    type=click.Choice(["manual"]),
+    default="manual",
+    help="Data source (manual=provide JSON/CSV file path)",
+)
+@click.option(
+    "--file-path",
+    type=click.Path(exists=True),
+    help="Path to JSON/CSV file containing news data",
+)
+def backfill_news(symbol, start_date, end_date, source, file_path):
+    """Backfill historical news data for replay mode.
+
+    Creates standardized JSON datasets in datasets/news/ directory for
+    deterministic testing and demos.
+
+    \b
+    Example:
+      mane backfill-news --symbol BTC-USD --start-date 2024-01-01 \\
+          --end-date 2024-01-31 --file-path news_data.json
+
+    \b
+    Expected JSON format:
+      {
+        "articles": [
+          {
+            "title": "...",
+            "url": "...",
+            "published_at": "2024-01-01T12:00:00Z",
+            "source": "coindesk",
+            "summary": "...",
+            "sentiment": 0.5
+          }
+        ]
+      }
+    """
+    import json
+    from pathlib import Path
+    from datetime import datetime
+
+    try:
+        # Validate dates
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            end_dt = datetime.fromisoformat(end_date)
+        except ValueError:
+            console.print("[red]Invalid date format. Use YYYY-MM-DD[/red]")
+            sys.exit(1)
+
+        if start_dt > end_dt:
+            console.print("[red]Start date must be before end date[/red]")
+            sys.exit(1)
+
+        # Check if file path provided
+        if source == "manual" and not file_path:
+            console.print("[red]Error: --file-path required for manual source[/red]")
+            sys.exit(1)
+
+        # Load input data
+        console.print(f"[cyan]Loading data from {file_path}...[/cyan]")
+        with open(file_path, "r") as f:
+            input_data = json.load(f)
+
+        if "articles" not in input_data:
+            console.print("[red]Invalid format: missing 'articles' field[/red]")
+            sys.exit(1)
+
+        articles = input_data["articles"]
+        console.print(f"[green]Loaded {len(articles)} articles[/green]")
+
+        # Filter articles by date range
+        filtered_articles = []
+        for article in articles:
+            pub_at = datetime.fromisoformat(
+                article["published_at"].replace("Z", "+00:00")
+            )
+            if start_dt <= pub_at <= end_dt:
+                # Ensure required fields and add symbol
+                if "symbols" not in article:
+                    article["symbols"] = [symbol]
+                elif symbol not in article["symbols"]:
+                    article["symbols"].append(symbol)
+                filtered_articles.append(article)
+
+        console.print(
+            f"[cyan]Filtered to {len(filtered_articles)} articles in date range[/cyan]"
+        )
+
+        # Create output directory
+        output_dir = Path(settings.news.replay_dataset_path)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create output file
+        output_file = output_dir / f"{symbol}_{start_date}.json"
+
+        # Create dataset structure
+        dataset = {
+            "symbol": symbol,
+            "date": start_date,
+            "articles": filtered_articles,
+        }
+
+        # Write to file
+        with open(output_file, "w") as f:
+            json.dump(dataset, f, indent=2)
+
+        console.print(f"\n[green]✓ Created dataset: {output_file}[/green]")
+        console.print(f"[green]  Articles: {len(filtered_articles)}[/green]")
+        console.print(f"[green]  Date range: {start_date} to {end_date}[/green]")
+        console.print(
+            f"\n[yellow]Use with: mane detect --symbol {symbol} --news-mode replay[/yellow]"
+        )
+
+    except FileNotFoundError:
+        console.print(f"[red]File not found: {file_path}[/red]")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        console.print(f"[red]Invalid JSON format:[/red] {e}")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Failed to backfill news:[/red] {e}")
+        logger.exception("Backfill news command failed")
+        sys.exit(1)
+
+
 @cli.command()
 @click.option("--interval", type=int, help="Poll interval in seconds (overrides config)")
+@click.option(
+    "--news-mode",
+    type=click.Choice(["live", "replay", "hybrid"]),
+    help="News aggregation mode (live=RSS/Reddit/Grok, replay=historical datasets, hybrid=both)",
+)
 @async_command
-async def serve(interval):
+async def serve(interval, news_mode):
     """Start continuous anomaly detection scheduler.
 
     Runs two periodic jobs:
@@ -426,6 +572,12 @@ async def serve(interval):
     - Anomaly detection: Every poll_interval seconds (default from config)
 
     Press Ctrl+C to stop gracefully.
+
+    \b
+    News Modes:
+      live   - RSS feeds + Reddit + Grok (all free, 5-10 min delay)
+      replay - Historical JSON datasets (deterministic, cost-free demos)
+      hybrid - Both live and replay sources
     """
     try:
         # Override interval if provided
@@ -435,8 +587,8 @@ async def serve(interval):
         # Initialize database
         init_database(settings.database.url)
 
-        # Create scheduler
-        scheduler = AnomalyDetectionScheduler(settings)
+        # Create scheduler with news mode
+        scheduler = AnomalyDetectionScheduler(settings, news_mode=news_mode)
 
         # Display startup info
         console.print(
