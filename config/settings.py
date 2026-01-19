@@ -129,8 +129,25 @@ class NewsSettings(BaseSettings):
         extra="ignore",
     )
 
-    # API Keys
-    cryptopanic_api_key: str
+    # Mode configuration: live, replay, or hybrid
+    mode: Literal["live", "replay", "hybrid"] = "live"
+
+    # RSS feed URLs (free sources)
+    rss_feeds: list[str] = Field(
+        default=[
+            "https://www.coindesk.com/arc/outboundfeeds/rss/",
+            "https://cointelegraph.com/rss",
+            "https://decrypt.co/feed",
+            "https://bitcoinmagazine.com/feed",
+            "https://www.theblock.co/rss.xml",
+        ]
+    )
+
+    # Historical replay configuration
+    replay_dataset_path: str = "datasets/news/"
+
+    # API Keys (now optional for paid providers)
+    cryptopanic_api_key: str | None = None
     newsapi_api_key: str | None = None
     reddit_client_id: str
     reddit_client_secret: str
