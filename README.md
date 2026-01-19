@@ -36,7 +36,7 @@ docker run --name mane-postgres -e POSTGRES_PASSWORD=yourpass -p 5432:5432 -d po
 
 # Configure (.env file)
 cp .env.example .env
-# Required: DATABASE__PASSWORD, ANTHROPIC_API_KEY
+# Required: DATABASE__PASSWORD, LLM_API_KEY
 # Optional: NEWS__GROK_API_KEY (X/Twitter data, paid)
 
 # Initialize & populate database
