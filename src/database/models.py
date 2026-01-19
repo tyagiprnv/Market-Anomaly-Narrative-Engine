@@ -103,7 +103,7 @@ class NewsArticle(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     anomaly_id = Column(String(36), ForeignKey("anomalies.id"), index=True)
 
-    source = Column(String(50))  # cryptopanic, newsapi, reddit
+    source = Column(String(50))  # cryptopanic, newsapi, rss, grok
     title = Column(Text, nullable=False)
     url = Column(Text)
     published_at = Column(DateTime, nullable=False)

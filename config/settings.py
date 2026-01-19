@@ -149,9 +149,6 @@ class NewsSettings(BaseSettings):
     # API Keys (now optional for paid providers)
     cryptopanic_api_key: str | None = None
     newsapi_api_key: str | None = None
-    reddit_client_id: str
-    reddit_client_secret: str
-    reddit_user_agent: str = "MarketAnomalyEngine/0.1.0"
     grok_api_key: str | None = None
 
 

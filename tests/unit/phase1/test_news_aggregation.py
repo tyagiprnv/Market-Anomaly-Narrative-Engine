@@ -8,17 +8,13 @@ import os
 # Set required environment variables for tests
 os.environ["DATABASE__PASSWORD"] = "test_password"
 os.environ["NEWS__CRYPTOPANIC_API_KEY"] = "test_crypto_key"
-os.environ["NEWS__REDDIT_CLIENT_ID"] = "test_reddit_id"
-os.environ["NEWS__REDDIT_CLIENT_SECRET"] = "test_reddit_secret"
 
 from src.phase1_detector.news_aggregation import (
     NewsArticle,
     CryptoPanicClient,
-    RedditClient,
     NewsAPIClient,
     NewsAggregator,
     CryptoPanicArticle,
-    RedditPost,
     NewsAPIArticle,
 )
 
@@ -39,19 +35,6 @@ MOCK_CRYPTOPANIC_RESPONSE = {
         }
     ]
 }
-
-
-MOCK_REDDIT_POST = Mock(
-    id="abc123",
-    title="Bitcoin discussion",
-    selftext="Discussing BTC price movements",
-    url="https://reddit.com/r/Bitcoin/abc123",
-    score=100,
-    num_comments=25,
-    author="crypto_user",
-    created_utc=datetime.now(timezone.utc).timestamp(),
-    permalink="/r/Bitcoin/abc123",
-)
 
 
 MOCK_NEWSAPI_RESPONSE = {
@@ -102,24 +85,6 @@ class TestNewsArticleModels:
         assert "BTC" in news_article.symbols
         assert news_article.sentiment is not None
         assert -1 <= news_article.sentiment <= 1
-
-    def test_reddit_post_conversion(self):
-        """Test converting Reddit post to NewsArticle."""
-        reddit_post = RedditPost(
-            post_id="abc123",
-            subreddit="CryptoCurrency",
-            title="Crypto discussion",
-            selftext="Discussion content",
-            url="https://reddit.com/r/CryptoCurrency/abc123",
-            score=100,
-            num_comments=25,
-            author="user",
-            created_utc=datetime.now(timezone.utc),
-            permalink="/r/CryptoCurrency/abc123",
-        )
-        news_article = reddit_post.to_news_article(symbols=["BTC-USD"])
-        assert news_article.source == "reddit"
-        assert "BTC-USD" in news_article.symbols
 
     def test_newsapi_article_conversion(self):
         """Test converting NewsAPI article to NewsArticle."""
@@ -180,50 +145,6 @@ class TestCryptoPanicClient:
         assert client.source_name == "cryptopanic"
 
 
-class TestRedditClient:
-    """Test Reddit API client."""
-
-    @pytest.mark.asyncio
-    async def test_get_news_success(self):
-        """Test successful news fetching from Reddit."""
-        with patch("praw.Reddit") as mock_reddit:
-            # Mock subreddit and posts
-            mock_subreddit = Mock()
-            mock_subreddit.hot.return_value = [MOCK_REDDIT_POST]
-            mock_reddit.return_value.subreddit.return_value = mock_subreddit
-
-            client = RedditClient(
-                client_id="test_id",
-                client_secret="test_secret",
-            )
-
-            articles = await client.get_news(symbols=["BTC"])
-
-            assert len(articles) > 0
-            assert articles[0].source == "reddit"
-
-    @pytest.mark.asyncio
-    async def test_health_check_success(self):
-        """Test health check with valid credentials."""
-        with patch("praw.Reddit") as mock_reddit:
-            mock_subreddit = Mock()
-            mock_subreddit.id = "test_id"
-            mock_reddit.return_value.subreddit.return_value = mock_subreddit
-
-            client = RedditClient(
-                client_id="test_id",
-                client_secret="test_secret",
-            )
-
-            is_healthy = await client.health_check()
-            assert is_healthy is True
-
-    def test_source_name(self):
-        """Test source name property."""
-        client = RedditClient(client_id="test_id", client_secret="test_secret")
-        assert client.source_name == "reddit"
-
-
 class TestNewsAPIClient:
     """Test NewsAPI client."""
 
@@ -271,9 +192,7 @@ class TestNewsAggregator:
         # Create aggregator with mocked clients
         with patch(
             "src.phase1_detector.news_aggregation.aggregator.CryptoPanicClient"
-        ) as MockCrypto, patch(
-            "src.phase1_detector.news_aggregation.aggregator.RedditClient"
-        ) as MockReddit:
+        ) as MockCrypto:
 
             # Mock client instances
             mock_crypto_client = AsyncMock()
@@ -288,23 +207,9 @@ class TestNewsAggregator:
             ]
             MockCrypto.return_value = mock_crypto_client
 
-            mock_reddit_client = AsyncMock()
-            mock_reddit_client.get_news.return_value = [
-                NewsArticle(
-                    source="reddit",
-                    title="BTC discussion",
-                    url="https://reddit.com",
-                    published_at=datetime.now(timezone.utc),
-                    symbols=["BTC"],
-                )
-            ]
-            MockReddit.return_value = mock_reddit_client
-
             # Create aggregator
             aggregator = NewsAggregator(
                 cryptopanic_key="test_key",
-                reddit_client_id="test_id",
-                reddit_client_secret="test_secret",
             )
 
             # Get news for anomaly
@@ -315,7 +220,7 @@ class TestNewsAggregator:
                 window_minutes=30,
             )
 
-            assert len(articles) >= 2
+            assert len(articles) >= 1
             # Check that articles have timing tags
             assert all(hasattr(a, "timing_tag") for a in articles)
 
@@ -323,30 +228,31 @@ class TestNewsAggregator:
     async def test_deduplication(self):
         """Test that duplicate URLs are removed."""
         with patch(
-            "src.phase1_detector.news_aggregation.aggregator.CryptoPanicClient"
-        ) as MockCrypto:
+            "src.phase1_detector.news_aggregation.aggregator.HistoricalReplayClient"
+        ) as MockReplay:
 
             # Mock client with duplicate articles
-            mock_client = AsyncMock()
-            mock_client.get_news.return_value = [
+            mock_replay_client = AsyncMock()
+            mock_replay_client.get_news.return_value = [
                 NewsArticle(
-                    source="cryptopanic",
+                    source="replay",
                     title="BTC news",
                     url="https://example.com/same",
                     published_at=datetime.now(timezone.utc),
                     symbols=["BTC"],
                 ),
                 NewsArticle(
-                    source="cryptopanic",
+                    source="replay",
                     title="BTC news duplicate",
                     url="https://example.com/same",
                     published_at=datetime.now(timezone.utc),
                     symbols=["BTC"],
                 ),
             ]
-            MockCrypto.return_value = mock_client
+            MockReplay.return_value = mock_replay_client
 
-            aggregator = NewsAggregator(cryptopanic_key="test_key")
+            # Use replay mode to avoid real API clients
+            aggregator = NewsAggregator(mode="replay")
 
             articles = await aggregator.get_news(symbols=["BTC-USD"])
 
@@ -358,12 +264,19 @@ class TestNewsAggregator:
         """Test health check of all sources."""
         with patch(
             "src.phase1_detector.news_aggregation.aggregator.CryptoPanicClient"
-        ) as MockCrypto:
+        ) as MockCrypto, patch(
+            "src.phase1_detector.news_aggregation.aggregator.RSSFeedClient"
+        ) as MockRSS:
 
-            mock_client = AsyncMock()
-            mock_client.health_check.return_value = True
-            mock_client.source_name = "cryptopanic"
-            MockCrypto.return_value = mock_client
+            mock_crypto_client = AsyncMock()
+            mock_crypto_client.health_check.return_value = True
+            mock_crypto_client.source_name = "cryptopanic"
+            MockCrypto.return_value = mock_crypto_client
+
+            mock_rss_client = AsyncMock()
+            mock_rss_client.health_check.return_value = True
+            mock_rss_client.source_name = "rss"
+            MockRSS.return_value = mock_rss_client
 
             aggregator = NewsAggregator(cryptopanic_key="test_key")
 
@@ -371,3 +284,5 @@ class TestNewsAggregator:
 
             assert "cryptopanic" in health
             assert health["cryptopanic"] is True
+            assert "rss" in health
+            assert health["rss"] is True

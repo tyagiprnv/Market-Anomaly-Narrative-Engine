@@ -10,7 +10,7 @@ from src.phase1_detector.news_aggregation.models import NewsArticle
 class NewsClient(ABC):
     """Abstract base class for news API clients.
 
-    All news clients (CryptoPanic, Reddit, NewsAPI) should inherit from this class
+    All news clients (CryptoPanic, NewsAPI, RSS, Grok) should inherit from this class
     and implement the required methods.
     """
 

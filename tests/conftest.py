@@ -17,8 +17,6 @@ def setup_test_environment():
     # Set minimal required environment variables for tests
     os.environ.setdefault("DATABASE__PASSWORD", "test_password")
     os.environ.setdefault("NEWS__CRYPTOPANIC_API_KEY", "test_key")
-    os.environ.setdefault("NEWS__REDDIT_CLIENT_ID", "test_client_id")
-    os.environ.setdefault("NEWS__REDDIT_CLIENT_SECRET", "test_secret")
     os.environ.setdefault("OPENAI_API_KEY", "sk-test-key")
     os.environ.setdefault("ANTHROPIC_API_KEY", "sk-ant-test-key")
 

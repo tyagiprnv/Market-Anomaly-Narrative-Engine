@@ -1,7 +1,7 @@
 """Example script to test news aggregation functionality.
 
 This script demonstrates:
-1. Individual news client usage (CryptoPanic, Reddit, NewsAPI)
+1. Individual news client usage (CryptoPanic, NewsAPI)
 2. NewsAggregator for combined news fetching
 3. Time-windowed news fetching for anomaly correlation
 4. Health checks for all news sources
@@ -15,7 +15,6 @@ from datetime import datetime, timedelta, timezone
 
 from src.phase1_detector.news_aggregation import (
     CryptoPanicClient,
-    RedditClient,
     NewsAPIClient,
     NewsAggregator,
 )
@@ -54,37 +53,9 @@ async def test_individual_clients():
     except Exception as e:
         print(f"✗ CryptoPanic Error: {e}")
 
-    # Test Reddit
-    print("\n2. Testing Reddit Client")
-    print("-" * 80)
-    try:
-        client = RedditClient(
-            client_id=settings.news.reddit_client_id,
-            client_secret=settings.news.reddit_client_secret,
-            user_agent=settings.news.reddit_user_agent,
-        )
-
-        # Health check
-        is_healthy = await client.health_check()
-        print(f"Health: {'✓ OK' if is_healthy else '✗ FAILED'}")
-
-        if is_healthy:
-            # Get recent crypto posts
-            articles = await client.get_news(symbols=["BTC", "ETH"], limit=5)
-            print(f"Found {len(articles)} articles")
-
-            for i, article in enumerate(articles[:3], 1):
-                print(f"\n  Article {i}:")
-                print(f"    Title: {article.title[:70]}...")
-                print(f"    Source: {article.source}")
-                print(f"    Published: {article.published_at}")
-                print(f"    Symbols: {', '.join(article.symbols)}")
-    except Exception as e:
-        print(f"✗ Reddit Error: {e}")
-
     # Test NewsAPI (optional)
     if settings.news.newsapi_api_key:
-        print("\n3. Testing NewsAPI Client")
+        print("\n2. Testing NewsAPI Client")
         print("-" * 80)
         try:
             client = NewsAPIClient(api_key=settings.news.newsapi_api_key)
@@ -225,8 +196,6 @@ async def main():
     print("\nThis script tests the Phase 1 news aggregation functionality.")
     print("Make sure you have configured API keys in your .env file:")
     print("  - NEWS__CRYPTOPANIC_API_KEY")
-    print("  - NEWS__REDDIT_CLIENT_ID")
-    print("  - NEWS__REDDIT_CLIENT_SECRET")
     print("  - NEWS__NEWSAPI_API_KEY (optional)")
 
     # Run tests

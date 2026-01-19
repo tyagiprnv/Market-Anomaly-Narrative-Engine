@@ -23,7 +23,6 @@ dependencies = [
     "python-binance>=1.0.23",
 
     # News APIs
-    "praw>=7.8.1",
     "newsapi-python>=0.2.7",
     "feedparser>=6.0.11",
 

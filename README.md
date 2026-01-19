@@ -14,7 +14,7 @@ MANE solves a critical problem in quantitative finance: dashboards tell you *wha
 
 ## 💰 Cost-Efficient Design
 
-**Zero API costs in production!** MANE uses free news sources (RSS feeds + Reddit) with optional historical replay mode for deterministic testing.
+**Zero API costs in production!** MANE uses free news sources (RSS feeds) with optional historical replay mode for deterministic testing.
 
 - **Production Cost**: $0/month (down from $500/month with paid APIs)
 - **News Quality**: 85-90% of paid API quality through keyword sentiment + LLM validation
@@ -36,14 +36,14 @@ docker run --name mane-postgres -e POSTGRES_PASSWORD=yourpass -p 5432:5432 -d po
 
 # Configure (.env file)
 cp .env.example .env
-# Required: DATABASE__PASSWORD, ANTHROPIC_API_KEY, NEWS__REDDIT_CLIENT_ID, NEWS__REDDIT_CLIENT_SECRET
+# Required: DATABASE__PASSWORD, ANTHROPIC_API_KEY
 # Optional: NEWS__GROK_API_KEY (X/Twitter data, paid)
 
 # Initialize & populate database
 mane init-db
 mane backfill --symbol BTC-USD --days 7   # Fetch historical price data
 
-# Run detection (free RSS + Reddit mode)
+# Run detection (free RSS mode)
 mane detect --symbol BTC-USD --news-mode live    # Free news sources
 mane detect --all --news-mode live               # All configured symbols
 mane serve --news-mode live                      # Continuous monitoring
@@ -117,7 +117,7 @@ src/
 ├── phase1_detector/        # Statistical detection, news aggregation, clustering
 │   ├── anomaly_detection/  # Z-score, Bollinger, volume, combined detectors
 │   ├── data_ingestion/     # Coinbase & Binance API clients
-│   ├── news_aggregation/   # RSS, Reddit (free) + CryptoPanic, NewsAPI, Grok (paid)
+│   ├── news_aggregation/   # RSS (free) + CryptoPanic, NewsAPI, Grok (paid)
 │   │   ├── rss_client.py      # Free RSS feeds (CoinDesk, Cointelegraph, etc.)
 │   │   ├── replay_client.py   # Historical datasets for testing
 │   │   └── sentiment.py       # Keyword-based sentiment extraction
@@ -151,9 +151,7 @@ LLM__MODEL=claude-3-5-haiku-20241022
 ANTHROPIC_API_KEY=sk-ant-...         # or OPENAI_API_KEY, DEEPSEEK_API_KEY
 
 # News Sources (Free)
-NEWS__MODE=live                      # live (RSS/Reddit), replay (datasets), hybrid
-NEWS__REDDIT_CLIENT_ID=your_id       # Required for live mode
-NEWS__REDDIT_CLIENT_SECRET=your_secret
+NEWS__MODE=live                      # live (RSS), replay (datasets), hybrid
 
 # News Sources (Paid - Optional)
 NEWS__CRYPTOPANIC_API_KEY=your_key   # Optional: paid API
@@ -205,7 +203,7 @@ mane backfill --symbol BTC-USD --days 7   # Backfill price history (1-min candle
 mane backfill --all --days 30             # Backfill all configured symbols
 
 # Detection (with news modes)
-mane detect --symbol BTC-USD --news-mode live    # Free RSS + Reddit
+mane detect --symbol BTC-USD --news-mode live    # Free RSS feeds
 mane detect --symbol BTC-USD --news-mode replay  # Historical datasets (testing)
 mane detect --all --news-mode live               # All symbols with free sources
 mane serve --news-mode live                      # Continuous monitoring (free sources)
@@ -224,7 +222,7 @@ mane metrics                              # Display performance metrics
 
 ### News Modes
 
-- **`live`** (default): Free RSS feeds + Reddit (5-10 min delay, $0/month)
+- **`live`** (default): Free RSS feeds (5-10 min delay, $0/month)
 - **`replay`**: Historical JSON datasets (deterministic, cost-free testing)
 - **`hybrid`**: Both live and replay sources (validation against known events)
 
@@ -259,7 +257,7 @@ For individual component usage, see `examples/` directory.
 - **End-to-end**: 5-15 seconds per anomaly
 
 **Key Optimizations**:
-- **Free news sources** (RSS/Reddit/Grok) → **$0/month** (vs $500 with paid APIs)
+- **Free news sources** (RSS/Grok) → **$0/month** (vs $500 with paid APIs)
 - Conditional LLM validation (80% cost reduction)
 - Parallel rule validators
 - Cached embeddings

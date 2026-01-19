@@ -132,7 +132,7 @@ def init_db(drop_existing):
 @click.option(
     "--news-mode",
     type=click.Choice(["live", "replay", "hybrid"]),
-    help="News aggregation mode (live=RSS/Reddit/Grok, replay=historical datasets, hybrid=both)",
+    help="News aggregation mode (live=RSS/Grok, replay=historical datasets, hybrid=both)",
 )
 @async_command
 async def detect(symbol, detect_all, news_mode):
@@ -145,7 +145,7 @@ async def detect(symbol, detect_all, news_mode):
 
     \b
     News Modes:
-      live   - RSS feeds + Reddit + Grok (all free, 5-10 min delay)
+      live   - RSS feeds + Grok (all free, 5-10 min delay)
       replay - Historical JSON datasets (deterministic, cost-free demos)
       hybrid - Both live and replay sources
     """
@@ -561,7 +561,7 @@ def backfill_news(symbol, start_date, end_date, source, file_path):
 @click.option(
     "--news-mode",
     type=click.Choice(["live", "replay", "hybrid"]),
-    help="News aggregation mode (live=RSS/Reddit/Grok, replay=historical datasets, hybrid=both)",
+    help="News aggregation mode (live=RSS/Grok, replay=historical datasets, hybrid=both)",
 )
 @async_command
 async def serve(interval, news_mode):
@@ -575,7 +575,7 @@ async def serve(interval, news_mode):
 
     \b
     News Modes:
-      live   - RSS feeds + Reddit + Grok (all free, 5-10 min delay)
+      live   - RSS feeds + Grok (all free, 5-10 min delay)
       replay - Historical JSON datasets (deterministic, cost-free demos)
       hybrid - Both live and replay sources
     """

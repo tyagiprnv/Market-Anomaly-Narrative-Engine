@@ -2,7 +2,6 @@
 
 This module provides clients for fetching cryptocurrency news from multiple sources:
 - CryptoPanic: Crypto-specific news aggregator with sentiment
-- Reddit: Crypto subreddit discussions
 - NewsAPI: General news from major outlets
 - Grok: X/Twitter real-time data via xAI API (optional)
 
@@ -32,14 +31,12 @@ Example:
 
 from src.phase1_detector.news_aggregation.models import (
     NewsArticle,
-    RedditPost,
     CryptoPanicArticle,
     NewsAPIArticle,
     GrokPost,
 )
 from src.phase1_detector.news_aggregation.news_client import NewsClient
 from src.phase1_detector.news_aggregation.cryptopanic_client import CryptoPanicClient
-from src.phase1_detector.news_aggregation.reddit_client import RedditClient
 from src.phase1_detector.news_aggregation.newsapi_client import NewsAPIClient
 from src.phase1_detector.news_aggregation.grok_client import GrokClient
 from src.phase1_detector.news_aggregation.aggregator import NewsAggregator
@@ -47,14 +44,12 @@ from src.phase1_detector.news_aggregation.aggregator import NewsAggregator
 __all__ = [
     # Models
     "NewsArticle",
-    "RedditPost",
     "CryptoPanicArticle",
     "NewsAPIArticle",
     "GrokPost",
     # Clients
     "NewsClient",
     "CryptoPanicClient",
-    "RedditClient",
     "NewsAPIClient",
     "GrokClient",
     # Aggregator

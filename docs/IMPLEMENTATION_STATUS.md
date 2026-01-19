@@ -198,7 +198,6 @@ DATA_INGESTION__BINANCE_API_KEY=
 
 - ✅ Abstract `NewsClient` base class
 - ✅ CryptoPanic API client (crypto-specific news with sentiment)
-- ✅ Reddit API client (PRAW - crypto subreddit discussions)
 - ✅ NewsAPI client (general news from major outlets)
 - ✅ NewsAggregator (combines all sources)
 - ✅ Time-window filtering (±30 minutes around anomaly)
@@ -210,16 +209,15 @@ DATA_INGESTION__BINANCE_API_KEY=
 
 **Files**:
 - `/src/phase1_detector/news_aggregation/news_client.py` - Abstract base class
-- `/src/phase1_detector/news_aggregation/models.py` - Pydantic models (NewsArticle, RedditPost, etc.)
+- `/src/phase1_detector/news_aggregation/models.py` - Pydantic models (NewsArticle, etc.)
 - `/src/phase1_detector/news_aggregation/cryptopanic_client.py` - CryptoPanic API
-- `/src/phase1_detector/news_aggregation/reddit_client.py` - Reddit PRAW client
 - `/src/phase1_detector/news_aggregation/newsapi_client.py` - NewsAPI client
 - `/src/phase1_detector/news_aggregation/aggregator.py` - Multi-source aggregator
 - `/tests/unit/phase1/test_news_aggregation.py` - Unit tests
 - `/examples/test_news_aggregation.py` - Usage example
 
 **Key Features**:
-- **Multi-source aggregation**: CryptoPanic, Reddit, NewsAPI
+- **Multi-source aggregation**: CryptoPanic, NewsAPI, RSS feeds
 - **Time-windowed fetching**: Get news within ±N minutes of anomaly
 - **Causal filtering**: Tag articles as pre_event (could have caused) or post_event (reported after)
 - **Sentiment analysis**: Extract sentiment from CryptoPanic votes
@@ -256,13 +254,8 @@ for article in articles:
 
 **Configuration**:
 ```bash
-# .env settings (required)
+# .env settings (optional)
 NEWS__CRYPTOPANIC_API_KEY=your_key_here
-NEWS__REDDIT_CLIENT_ID=your_client_id
-NEWS__REDDIT_CLIENT_SECRET=your_secret
-NEWS__REDDIT_USER_AGENT=MarketAnomalyEngine/0.1.0
-
-# Optional
 NEWS__NEWSAPI_API_KEY=your_key_here
 
 # Time window configuration
@@ -900,7 +893,7 @@ Core implementation:
 ### Immediate Priorities (Week 1-2)
 
 1. ✅ ~~Set up data ingestion (Coinbase + Binance APIs)~~
-2. ✅ ~~Implement news aggregation (CryptoPanic + Reddit + NewsAPI)~~
+2. ✅ ~~Implement news aggregation (CryptoPanic + RSS + NewsAPI)~~
 3. ✅ ~~Build news clustering (embeddings + HDBSCAN)~~
 4. ✅ ~~Implement LiteLLM client wrapper~~
 5. Test Phase 1 end-to-end
@@ -1010,7 +1003,7 @@ docker run --name mane-postgres \
 - **Architecture**: Foundation is solid with proper separation of concerns
 - **Phase 1 Complete**: All data collection components are now implemented
   - Data Ingestion: Both Coinbase and Binance clients working with live APIs
-  - News Aggregation: CryptoPanic, Reddit, NewsAPI integration complete
+  - News Aggregation: CryptoPanic, RSS, NewsAPI integration complete
   - News Clustering: sentence-transformers + HDBSCAN implementation working
 - **Phase 2 Complete**: Journalist agent fully operational
   - LLM Client: Provider-agnostic wrapper with full tool calling support

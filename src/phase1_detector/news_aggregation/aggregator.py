@@ -7,7 +7,6 @@ from typing import Sequence
 from config.settings import settings
 from src.phase1_detector.news_aggregation.news_client import NewsClient
 from src.phase1_detector.news_aggregation.cryptopanic_client import CryptoPanicClient
-from src.phase1_detector.news_aggregation.reddit_client import RedditClient
 from src.phase1_detector.news_aggregation.newsapi_client import NewsAPIClient
 from src.phase1_detector.news_aggregation.grok_client import GrokClient
 from src.phase1_detector.news_aggregation.rss_client import RSSFeedClient
@@ -19,7 +18,7 @@ class NewsAggregator:
     """Aggregates news from multiple sources for anomaly detection.
 
     Supports three modes:
-    - live: RSS feeds + Reddit + Grok (all free)
+    - live: RSS feeds + Grok (all free)
     - replay: Historical JSON datasets (deterministic demos)
     - hybrid: Both live and replay sources
 
@@ -30,8 +29,6 @@ class NewsAggregator:
         self,
         mode: str | None = None,
         cryptopanic_key: str | None = None,
-        reddit_client_id: str | None = None,
-        reddit_client_secret: str | None = None,
         newsapi_key: str | None = None,
         grok_key: str | None = None,
     ):
@@ -40,8 +37,6 @@ class NewsAggregator:
         Args:
             mode: News aggregation mode ('live', 'replay', 'hybrid'). Defaults to settings.
             cryptopanic_key: CryptoPanic API key (optional, paid)
-            reddit_client_id: Reddit client ID (defaults to settings)
-            reddit_client_secret: Reddit client secret (defaults to settings)
             newsapi_key: NewsAPI key (optional, paid)
             grok_key: Grok API key for X/Twitter data (optional, defaults to settings)
         """
@@ -56,20 +51,8 @@ class NewsAggregator:
             )
 
         elif mode == "live":
-            # RSS (free) + Reddit (free) + Grok (free tier)
+            # RSS (free) + Grok (free tier)
             self.clients.append(RSSFeedClient(rss_feeds=settings.news.rss_feeds))
-
-            # Reddit client (free)
-            reddit_id = reddit_client_id or settings.news.reddit_client_id
-            reddit_secret = reddit_client_secret or settings.news.reddit_client_secret
-            if reddit_id and reddit_secret:
-                self.clients.append(
-                    RedditClient(
-                        client_id=reddit_id,
-                        client_secret=reddit_secret,
-                        user_agent=settings.news.reddit_user_agent,
-                    )
-                )
 
             # Grok client (optional - free tier available)
             grok_api_key = grok_key or settings.news.grok_api_key
@@ -91,17 +74,6 @@ class NewsAggregator:
                 HistoricalReplayClient(dataset_path=settings.news.replay_dataset_path)
             )
             self.clients.append(RSSFeedClient(rss_feeds=settings.news.rss_feeds))
-
-            reddit_id = reddit_client_id or settings.news.reddit_client_id
-            reddit_secret = reddit_client_secret or settings.news.reddit_client_secret
-            if reddit_id and reddit_secret:
-                self.clients.append(
-                    RedditClient(
-                        client_id=reddit_id,
-                        client_secret=reddit_secret,
-                        user_agent=settings.news.reddit_user_agent,
-                    )
-                )
 
             grok_api_key = grok_key or settings.news.grok_api_key
             if grok_api_key:

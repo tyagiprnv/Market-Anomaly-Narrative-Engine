@@ -8,9 +8,9 @@ class NewsArticle(BaseModel):
     """News article data from various sources.
 
     Attributes:
-        source: News source (cryptopanic, reddit, newsapi)
+        source: News source (cryptopanic, newsapi, rss, grok)
         title: Article title
-        url: Article URL (optional for Reddit posts)
+        url: Article URL
         published_at: Publication timestamp
         summary: Article summary or content snippet
         sentiment: Optional sentiment score (-1 to 1, where -1 is bearish, 1 is bullish)
@@ -34,52 +34,6 @@ class NewsArticle(BaseModel):
             datetime: lambda v: v.isoformat(),
         }
     )
-
-
-class RedditPost(BaseModel):
-    """Reddit post data specific to crypto discussions.
-
-    Attributes:
-        post_id: Reddit post ID
-        subreddit: Subreddit name (e.g., 'CryptoCurrency', 'Bitcoin')
-        title: Post title
-        selftext: Post content (for text posts)
-        url: Post URL
-        score: Reddit score (upvotes - downvotes)
-        num_comments: Number of comments
-        author: Post author username
-        created_utc: UTC timestamp
-        permalink: Relative URL to the post
-    """
-
-    post_id: str
-    subreddit: str
-    title: str
-    selftext: str | None = None
-    url: str
-    score: int
-    num_comments: int
-    author: str
-    created_utc: datetime
-    permalink: str
-
-    def to_news_article(self, symbols: list[str] | None = None) -> NewsArticle:
-        """Convert Reddit post to NewsArticle.
-
-        Args:
-            symbols: List of symbols to associate with this article
-
-        Returns:
-            NewsArticle instance
-        """
-        return NewsArticle(
-            source="reddit",
-            title=self.title,
-            url=f"https://reddit.com{self.permalink}",
-            published_at=self.created_utc,
-            summary=self.selftext[:500] if self.selftext else None,
-            symbols=symbols or [],
-        )
 
 
 class CryptoPanicArticle(BaseModel):
