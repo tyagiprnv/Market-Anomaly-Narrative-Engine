@@ -10,66 +10,111 @@ from src.phase1_detector.news_aggregation.cryptopanic_client import CryptoPanicC
 from src.phase1_detector.news_aggregation.reddit_client import RedditClient
 from src.phase1_detector.news_aggregation.newsapi_client import NewsAPIClient
 from src.phase1_detector.news_aggregation.grok_client import GrokClient
+from src.phase1_detector.news_aggregation.rss_client import RSSFeedClient
+from src.phase1_detector.news_aggregation.replay_client import HistoricalReplayClient
 from src.phase1_detector.news_aggregation.models import NewsArticle
 
 
 class NewsAggregator:
     """Aggregates news from multiple sources for anomaly detection.
 
-    Combines CryptoPanic, Reddit, and NewsAPI to provide comprehensive
-    coverage of crypto-related news within specified time windows.
+    Supports three modes:
+    - live: RSS feeds + Reddit + Grok (all free)
+    - replay: Historical JSON datasets (deterministic demos)
+    - hybrid: Both live and replay sources
 
     This is the main entry point for Phase 1 news aggregation.
     """
 
     def __init__(
         self,
+        mode: str | None = None,
         cryptopanic_key: str | None = None,
         reddit_client_id: str | None = None,
         reddit_client_secret: str | None = None,
         newsapi_key: str | None = None,
         grok_key: str | None = None,
     ):
-        """Initialize news aggregator with API credentials.
+        """Initialize news aggregator with mode and API credentials.
 
         Args:
-            cryptopanic_key: CryptoPanic API key (defaults to settings)
+            mode: News aggregation mode ('live', 'replay', 'hybrid'). Defaults to settings.
+            cryptopanic_key: CryptoPanic API key (optional, paid)
             reddit_client_id: Reddit client ID (defaults to settings)
             reddit_client_secret: Reddit client secret (defaults to settings)
-            newsapi_key: NewsAPI key (defaults to settings)
+            newsapi_key: NewsAPI key (optional, paid)
             grok_key: Grok API key for X/Twitter data (optional, defaults to settings)
         """
+        mode = mode or settings.news.mode
+        self.mode = mode
         self.clients: list[NewsClient] = []
 
-        # Initialize CryptoPanic client
-        crypto_key = cryptopanic_key or settings.news.cryptopanic_api_key
-        if crypto_key:
-            self.clients.append(CryptoPanicClient(api_key=crypto_key))
-
-        # Initialize Reddit client
-        reddit_id = reddit_client_id or settings.news.reddit_client_id
-        reddit_secret = reddit_client_secret or settings.news.reddit_client_secret
-        if reddit_id and reddit_secret:
+        if mode == "replay":
+            # Historical replay only (deterministic, cost-free)
             self.clients.append(
-                RedditClient(
-                    client_id=reddit_id,
-                    client_secret=reddit_secret,
-                    user_agent=settings.news.reddit_user_agent,
-                )
+                HistoricalReplayClient(dataset_path=settings.news.replay_dataset_path)
             )
 
-        # Initialize NewsAPI client (optional)
-        news_key = newsapi_key or settings.news.newsapi_api_key
-        if news_key:
-            self.clients.append(NewsAPIClient(api_key=news_key))
+        elif mode == "live":
+            # RSS (free) + Reddit (free) + Grok (free tier)
+            self.clients.append(RSSFeedClient(rss_feeds=settings.news.rss_feeds))
 
-        # Initialize Grok client (optional - X/Twitter data)
-        grok_api_key = grok_key or settings.news.grok_api_key
-        if grok_api_key:
-            self.clients.append(GrokClient(api_key=grok_api_key))
+            # Reddit client (free)
+            reddit_id = reddit_client_id or settings.news.reddit_client_id
+            reddit_secret = reddit_client_secret or settings.news.reddit_client_secret
+            if reddit_id and reddit_secret:
+                self.clients.append(
+                    RedditClient(
+                        client_id=reddit_id,
+                        client_secret=reddit_secret,
+                        user_agent=settings.news.reddit_user_agent,
+                    )
+                )
+
+            # Grok client (optional - free tier available)
+            grok_api_key = grok_key or settings.news.grok_api_key
+            if grok_api_key:
+                self.clients.append(GrokClient(api_key=grok_api_key))
+
+            # Paid providers (optional, for backwards compatibility)
+            crypto_key = cryptopanic_key or settings.news.cryptopanic_api_key
+            if crypto_key:
+                self.clients.append(CryptoPanicClient(api_key=crypto_key))
+
+            news_key = newsapi_key or settings.news.newsapi_api_key
+            if news_key:
+                self.clients.append(NewsAPIClient(api_key=news_key))
+
+        elif mode == "hybrid":
+            # Both replay and live sources
+            self.clients.append(
+                HistoricalReplayClient(dataset_path=settings.news.replay_dataset_path)
+            )
+            self.clients.append(RSSFeedClient(rss_feeds=settings.news.rss_feeds))
+
+            reddit_id = reddit_client_id or settings.news.reddit_client_id
+            reddit_secret = reddit_client_secret or settings.news.reddit_client_secret
+            if reddit_id and reddit_secret:
+                self.clients.append(
+                    RedditClient(
+                        client_id=reddit_id,
+                        client_secret=reddit_secret,
+                        user_agent=settings.news.reddit_user_agent,
+                    )
+                )
+
+            grok_api_key = grok_key or settings.news.grok_api_key
+            if grok_api_key:
+                self.clients.append(GrokClient(api_key=grok_api_key))
+
+        else:
+            raise ValueError(f"Invalid news mode: {mode}. Must be 'live', 'replay', or 'hybrid'")
 
         if not self.clients:
-            raise ValueError("At least one news API key must be provided")
+            raise ValueError(
+                f"No news sources configured for mode '{mode}'. "
+                f"Check your settings and API keys."
+            )
 
     async def get_news_for_anomaly(
         self,
