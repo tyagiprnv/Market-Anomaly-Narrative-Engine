@@ -54,13 +54,15 @@ class MarketAnomalyPipeline:
     5. Validates narrative (Phase 3)
     """
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, news_mode: str | None = None):
         """Initialize the pipeline with all components.
 
         Args:
             settings: Application settings
+            news_mode: News aggregation mode ('live', 'replay', 'hybrid'). Defaults to settings.
         """
         self.settings = settings
+        self.news_mode = news_mode or settings.news.mode
 
         # Initialize crypto client
         if settings.data_ingestion.primary_source == "coinbase":
@@ -76,7 +78,7 @@ class MarketAnomalyPipeline:
 
         # Initialize Phase 1 components
         self.detector = AnomalyDetector()
-        self.news_aggregator = NewsAggregator(settings)
+        self.news_aggregator = NewsAggregator(mode=self.news_mode)
         self.clusterer = NewsClusterer(settings)
 
         # Initialize Phase 2 component

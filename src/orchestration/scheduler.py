@@ -53,14 +53,16 @@ class AnomalyDetectionScheduler:
     4. Supports graceful start/stop
     """
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, news_mode: str | None = None):
         """Initialize the scheduler.
 
         Args:
             settings: Application settings
+            news_mode: News aggregation mode ('live', 'replay', 'hybrid'). Defaults to settings.
         """
         self.settings = settings
-        self.pipeline = MarketAnomalyPipeline(settings)
+        self.news_mode = news_mode or settings.news.mode
+        self.pipeline = MarketAnomalyPipeline(settings, news_mode=self.news_mode)
         self.symbols = settings.detection.symbols
         self.poll_interval = settings.data_ingestion.poll_interval_seconds
 
