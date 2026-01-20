@@ -226,10 +226,17 @@ class JournalistAgent:
 
                 # Append tool results to conversation
                 for tool_result in tool_results:
+                    # Use model_dump_json if result is a Pydantic model, otherwise json.dumps
+                    result = tool_result["result"]
+                    if hasattr(result, "model_dump_json"):
+                        content = result.model_dump_json()
+                    else:
+                        content = json.dumps(result)
+
                     messages.append(
                         LLMMessage(
                             role=LLMRole.TOOL,
-                            content=json.dumps(tool_result["result"]),
+                            content=content,
                             tool_call_id=tool_result["tool_call_id"],
                         )
                     )
@@ -271,8 +278,9 @@ class JournalistAgent:
                 result = await self.tool_registry.execute_tool(tool_name, **arguments)
 
                 # Convert Pydantic model to dict if needed
+                # Use mode='json' to ensure datetime objects are serialized to strings
                 if hasattr(result, "model_dump"):
-                    result_dict = result.model_dump()
+                    result_dict = result.model_dump(mode='json')
                 else:
                     result_dict = result
 

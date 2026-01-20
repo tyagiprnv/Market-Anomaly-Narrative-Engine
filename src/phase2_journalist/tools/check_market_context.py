@@ -114,7 +114,9 @@ class CheckMarketContextTool(AgentTool):
             if isinstance(timestamp, str):
                 from datetime import datetime
 
-                timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                # Handle both "Z" and " UTC" suffixes
+                timestamp_str = timestamp.replace("Z", "+00:00").replace(" UTC", "")
+                timestamp = datetime.fromisoformat(timestamp_str)
 
             # Query price data around the timestamp
             start_time = timestamp - timedelta(minutes=window_minutes)

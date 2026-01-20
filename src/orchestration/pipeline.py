@@ -134,7 +134,7 @@ class MarketAnomalyPipeline:
             logger.info(f"[{symbol}] Fetching price history...")
             prices_df = await self._fetch_price_history(symbol, session)
             if prices_df is None or len(prices_df) < self.settings.orchestration.min_price_points:
-                logger.warning(
+                logger.info(
                     f"[{symbol}] Insufficient price history: {len(prices_df) if prices_df is not None else 0} points "
                     f"(need {self.settings.orchestration.min_price_points})"
                 )

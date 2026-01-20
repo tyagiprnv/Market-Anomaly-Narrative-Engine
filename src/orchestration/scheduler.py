@@ -267,7 +267,7 @@ class AnomalyDetectionScheduler:
             stats: Pipeline statistics
         """
         if not stats.success:
-            logger.warning(
+            logger.info(
                 f"[{symbol}] Pipeline failed at phase '{stats.phase_reached}': "
                 f"{stats.error_message}"
             )

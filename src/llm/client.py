@@ -3,10 +3,14 @@
 import asyncio
 import logging
 import os
+import warnings
 from typing import Any
 
 import litellm
 from litellm import acompletion, completion
+
+# Suppress Pydantic serialization warnings from LiteLLM
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 from litellm.exceptions import (
     APIConnectionError,
     APIError,

@@ -74,9 +74,15 @@ class VerifyTimestampTool(AgentTool):
 
             # Convert strings to datetime if needed
             if isinstance(news_ts, str):
-                news_ts = datetime.fromisoformat(news_ts.replace("Z", "+00:00"))
+                # Handle both "Z" and " UTC" suffixes
+                news_ts = datetime.fromisoformat(
+                    news_ts.replace("Z", "+00:00").replace(" UTC", "")
+                )
             if isinstance(anomaly_ts, str):
-                anomaly_ts = datetime.fromisoformat(anomaly_ts.replace("Z", "+00:00"))
+                # Handle both " UTC" and "Z" suffixes
+                anomaly_ts = datetime.fromisoformat(
+                    anomaly_ts.replace("Z", "+00:00").replace(" UTC", "")
+                )
 
             if not news_ts or not anomaly_ts:
                 return self._create_error_output(
