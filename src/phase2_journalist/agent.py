@@ -51,13 +51,14 @@ class JournalistAgent:
         self.max_tool_iterations = max_tool_iterations
         self.session = session
 
-        # Initialize tool registry
+        # Initialize tool registry (can be set later if neither is provided initially)
         if tool_registry:
             self.tool_registry = tool_registry
         elif session:
             self.tool_registry = ToolRegistry(session=session)
         else:
-            raise ValueError("Either tool_registry or session must be provided")
+            # Allow deferred initialization - will be set before generate_narrative is called
+            self.tool_registry = None
 
     async def generate_narrative(
         self,
@@ -212,11 +213,14 @@ class JournalistAgent:
                 tool_results = await self._execute_tool_calls(response.tool_calls)
                 tool_executions.extend(tool_results)
 
-                # Append assistant message to conversation
+                # Append assistant message with tool_calls to conversation
+                # This is required by DeepSeek and OpenAI APIs - the assistant message
+                # must include the tool_calls so subsequent tool messages can reference them
                 messages.append(
                     LLMMessage(
                         role=LLMRole.ASSISTANT,
-                        content=response.content if response.content else "",
+                        content=response.content if response.content else None,
+                        tool_calls=[tc.model_dump() for tc in response.tool_calls],
                     )
                 )
 

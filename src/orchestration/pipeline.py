@@ -83,10 +83,12 @@ class MarketAnomalyPipeline:
 
         # Initialize Phase 2 component
         llm_client = LLMClient()
-        self.journalist = JournalistAgent(llm_client, settings)
+        # Note: JournalistAgent will be given a session in generate_narrative
+        self.journalist = JournalistAgent(llm_client=llm_client)
 
         # Initialize Phase 3 component
-        self.validator = ValidationEngine(llm_client, settings)
+        # Note: ValidationEngine will be given a session in _validate_narrative
+        self.validator = ValidationEngine(llm_client=llm_client)
 
     async def run_for_symbol(
         self,
@@ -210,18 +212,22 @@ class MarketAnomalyPipeline:
             stats.success = True
             stats.phase_reached = "complete"
 
-            # Reload anomaly with all relationships
+            # Reload anomaly with all relationships eagerly loaded
+            from sqlalchemy.orm import joinedload
             final_anomaly = (
                 session.query(Anomaly)
                 .filter(Anomaly.id == anomaly.id)
                 .options(
-                    selectinload(Anomaly.narrative),
+                    joinedload(Anomaly.narrative),  # Use joinedload for eager loading
                     selectinload(Anomaly.news_articles),
                     selectinload(Anomaly.news_clusters),
                 )
                 .first()
             )
 
+            # Note: We could expunge objects to make them usable after session closes,
+            # but for simplicity, we let the CLI handle the display within the session
+            # or use the list-narratives command for viewing results
             return final_anomaly, stats
 
         except Exception as e:
@@ -462,8 +468,13 @@ class MarketAnomalyPipeline:
             .first()
         )
 
-        # Generate narrative (Phase 2)
-        narrative = await self.journalist.generate_narrative(anomaly, session)
+        # Set session on journalist for this generation
+        self.journalist.session = session
+        from src.phase2_journalist.tools import ToolRegistry
+        self.journalist.tool_registry = ToolRegistry(session=session)
+
+        # Generate narrative (Phase 2) - pass news articles, not session
+        narrative = await self.journalist.generate_narrative(anomaly, anomaly.news_articles)
 
         return narrative
 
@@ -494,7 +505,15 @@ class MarketAnomalyPipeline:
             .first()
         )
 
+        # Set session on validator for this validation
+        self.validator.session = session
+        from src.phase3_skeptic.validators import ValidatorRegistry
+        self.validator.validator_registry = ValidatorRegistry(
+            session=session,
+            llm_client=self.validator.llm_client
+        )
+
         # Validate (Phase 3)
-        result = await self.validator.validate_narrative(narrative, session)
+        result = await self.validator.validate_narrative(narrative)
 
         return result

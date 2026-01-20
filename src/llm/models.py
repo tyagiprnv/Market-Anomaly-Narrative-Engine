@@ -22,15 +22,17 @@ class LLMMessage(BaseModel):
 
     Attributes:
         role: The role of the message sender
-        content: The message content
+        content: The message content (can be None for assistant messages with tool_calls)
         name: Optional name for tool messages
         tool_call_id: Optional ID for tool response messages
+        tool_calls: Optional tool calls for assistant messages
     """
 
     role: LLMRole
-    content: str
+    content: str | None = None
     name: str | None = None
     tool_call_id: str | None = None
+    tool_calls: list[dict[str, Any]] | None = None
 
 
 class ToolCall(BaseModel):

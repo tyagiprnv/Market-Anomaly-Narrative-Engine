@@ -204,18 +204,29 @@ async def detect(symbol, detect_all, news_mode):
             if stats.anomaly_detected and anomaly:
                 anomaly_count += 1
 
-                # Format narrative (truncate if too long)
-                narrative_text = anomaly.narrative.narrative_text
-                if len(narrative_text) > 200:
-                    narrative_text = narrative_text[:197] + "..."
+                # Handle detached instances (session closed after pipeline execution)
+                try:
+                    # Check if narrative exists (it might not if pipeline failed mid-execution)
+                    if not hasattr(anomaly, 'narrative') or anomaly.narrative is None:
+                        console.print(f"• [{sym}] Anomaly detected but narrative generation failed")
+                        continue
 
-                # Format validation status
-                if anomaly.narrative.validation_passed:
-                    validation_status = "[green]✓ VALIDATED[/green]"
-                elif anomaly.narrative.validation_passed is False:
-                    validation_status = "[red]✗ REJECTED[/red]"
-                else:
-                    validation_status = "[yellow]? UNKNOWN[/yellow]"
+                    # Format narrative (truncate if too long)
+                    narrative_text = anomaly.narrative.narrative_text
+                    if len(narrative_text) > 200:
+                        narrative_text = narrative_text[:197] + "..."
+
+                    # Format validation status
+                    if anomaly.narrative.validation_passed:
+                        validation_status = "[green]✓ VALIDATED[/green]"
+                    elif anomaly.narrative.validation_passed is False:
+                        validation_status = "[red]✗ REJECTED[/red]"
+                    else:
+                        validation_status = "[yellow]? UNKNOWN[/yellow]"
+                except Exception as e:
+                    logger.warning(f"Could not access narrative for {sym}: {e}")
+                    console.print(f"• [{sym}] Anomaly detected but narrative data unavailable")
+                    continue
 
                 # Create panel
                 panel_content = (
