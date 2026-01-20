@@ -108,6 +108,8 @@ class NewsArticle(Base):
     url = Column(Text)
     published_at = Column(DateTime, nullable=False)
     summary = Column(Text)
+    sentiment = Column(Float)  # Sentiment score (-1 to 1, bearish to bullish)
+    symbols = Column(JSON)  # List of related symbols
 
     # Clustering info
     cluster_id = Column(Integer)  # -1 for unclustered

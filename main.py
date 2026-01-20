@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 from config.settings import Settings
 from src.cli.utils import async_command, console, run_with_shutdown
 from src.database.connection import get_db_context, init_database
-from src.database.models import Anomaly, Base, Narrative
+from src.database.models import Anomaly, Base, Narrative, NewsArticle
 from src.orchestration.pipeline import MarketAnomalyPipeline
 from src.orchestration.scheduler import AnomalyDetectionScheduler
 
@@ -61,6 +61,7 @@ def cli():
       mane detect --all               # Run detection for all configured symbols
       mane serve                      # Start continuous monitoring
       mane list-narratives --limit 5  # View recent narratives
+      mane list-news --symbol BTC-USD # View news articles
       mane metrics                    # Show performance metrics
     """
     pass
@@ -734,6 +735,151 @@ def list_narratives(limit, symbol, validated_only, format):
     except Exception as e:
         console.print(f"[red]Failed to list narratives:[/red] {e}")
         logger.exception("List narratives command failed")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--limit", type=int, default=20, help="Number of articles to show")
+@click.option("--symbol", type=str, help="Filter by trading symbol")
+@click.option("--anomaly-id", type=str, help="Filter by anomaly ID")
+@click.option("--source", type=str, help="Filter by news source")
+@click.option(
+    "--format",
+    type=click.Choice(["table", "json"]),
+    default="table",
+    help="Output format",
+)
+def list_news(limit, symbol, anomaly_id, source, format):
+    """List news articles from the database.
+
+    Shows news articles linked to anomalies with sentiment, timing, and source info.
+    """
+    try:
+        # Initialize database
+        init_database(settings.database.url)
+
+        with get_db_context() as session:
+            # Build query
+            query = (
+                session.query(NewsArticle)
+                .join(Anomaly)
+                .options(selectinload(NewsArticle.anomaly))
+                .order_by(NewsArticle.published_at.desc())
+            )
+
+            # Apply filters
+            if symbol:
+                query = query.filter(Anomaly.symbol == symbol)
+
+            if anomaly_id:
+                query = query.filter(NewsArticle.anomaly_id == anomaly_id)
+
+            if source:
+                query = query.filter(NewsArticle.source == source)
+
+            # Execute query
+            articles = query.limit(limit).all()
+
+            if not articles:
+                console.print("[yellow]No news articles found[/yellow]")
+                if symbol or anomaly_id or source:
+                    console.print("[dim]Try without filters[/dim]")
+                return
+
+            # Output based on format
+            if format == "json":
+                # JSON output
+                data = [
+                    {
+                        "id": str(a.id),
+                        "anomaly_id": str(a.anomaly_id),
+                        "symbol": a.anomaly.symbol,
+                        "source": a.source,
+                        "title": a.title,
+                        "url": a.url,
+                        "published_at": a.published_at.isoformat(),
+                        "summary": a.summary,
+                        "sentiment": a.sentiment if hasattr(a, 'sentiment') else None,
+                        "timing_tag": a.timing_tag,
+                        "time_diff_minutes": a.time_diff_minutes,
+                        "cluster_id": a.cluster_id,
+                    }
+                    for a in articles
+                ]
+                console.print(JSON.from_data(data))
+
+            else:
+                # Table output
+                table = Table(
+                    title=f"News Articles ({len(articles)})",
+                    box=box.ROUNDED,
+                    show_lines=True,
+                )
+                table.add_column("Symbol", style="cyan", no_wrap=True)
+                table.add_column("Published", style="magenta", no_wrap=True)
+                table.add_column("Source", style="yellow", no_wrap=True)
+                table.add_column("Title", style="green", max_width=40)
+                table.add_column("Sentiment", justify="center", no_wrap=True)
+                table.add_column("Timing", justify="center", no_wrap=True)
+
+                for a in articles:
+                    # Format sentiment
+                    sentiment_val = a.sentiment if hasattr(a, 'sentiment') else None
+                    if sentiment_val is not None:
+                        if sentiment_val > 0.2:
+                            sentiment_str = f"[green]+{sentiment_val:.2f}[/green]"
+                        elif sentiment_val < -0.2:
+                            sentiment_str = f"[red]{sentiment_val:.2f}[/red]"
+                        else:
+                            sentiment_str = f"[dim]{sentiment_val:.2f}[/dim]"
+                    else:
+                        sentiment_str = "[dim]N/A[/dim]"
+
+                    # Format timing
+                    if a.timing_tag == "pre_event":
+                        timing_str = f"[yellow]Pre ({a.time_diff_minutes:.0f}m)[/yellow]"
+                    elif a.timing_tag == "post_event":
+                        timing_str = f"[blue]Post (+{a.time_diff_minutes:.0f}m)[/blue]"
+                    else:
+                        timing_str = "[dim]N/A[/dim]"
+
+                    # Truncate title if too long
+                    title = a.title
+                    if len(title) > 70:
+                        title = title[:67] + "..."
+
+                    table.add_row(
+                        a.anomaly.symbol,
+                        a.published_at.strftime("%m-%d %H:%M"),
+                        a.source,
+                        title,
+                        sentiment_str,
+                        timing_str,
+                    )
+
+                console.print(table)
+
+                # Show summary stats
+                console.print()
+                sources = {}
+                sentiments = []
+                for a in articles:
+                    sources[a.source] = sources.get(a.source, 0) + 1
+                    if hasattr(a, 'sentiment') and a.sentiment is not None:
+                        sentiments.append(a.sentiment)
+
+                console.print(f"[cyan]Sources:[/cyan] {', '.join(f'{k}({v})' for k, v in sources.items())}")
+                if sentiments:
+                    avg_sentiment = sum(sentiments) / len(sentiments)
+                    console.print(f"[cyan]Average Sentiment:[/cyan] {avg_sentiment:.2f}")
+
+    except (OperationalError, ProgrammingError):
+        console.print("[red]Database connection failed[/red]")
+        console.print("\n[yellow]Did you run 'mane init-db'?[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Failed to list news:[/red] {e}")
+        logger.exception("List news command failed")
         sys.exit(1)
 
 
