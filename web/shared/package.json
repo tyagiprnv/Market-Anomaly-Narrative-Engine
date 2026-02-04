@@ -1,0 +1,16 @@
+{
+  "name": "@mane/shared",
+  "version": "1.0.0",
+  "description": "Shared types and constants for Market Anomaly Narrative Engine",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": ["mane", "shared", "types"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
