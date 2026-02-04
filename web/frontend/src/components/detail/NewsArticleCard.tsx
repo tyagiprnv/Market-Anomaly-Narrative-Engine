@@ -4,22 +4,15 @@
 
 import { NewsArticleDTO } from '@mane/shared/types/database';
 import { formatDate, getSentimentColor, getTimingBadgeText } from '../../utils/formatters';
+import { badgeColorMap, getColor } from '../../utils/colors';
 
 interface NewsArticleCardProps {
   article: NewsArticleDTO;
 }
 
 export function NewsArticleCard({ article }: NewsArticleCardProps) {
-  const sentimentColor = getSentimentColor(article.sentiment);
+  const sentimentColor = getColor(getSentimentColor(article.sentiment));
   const timingText = getTimingBadgeText(article.timing);
-
-  const badgeColorMap = {
-    success: 'bg-green-100 text-green-800',
-    danger: 'bg-red-100 text-red-800',
-    neutral: 'bg-gray-100 text-gray-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    info: 'bg-blue-100 text-blue-800',
-  };
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">

@@ -5,6 +5,7 @@
 import { NewsClusterDTO, NewsArticleDTO } from '@mane/shared/types/database';
 import { NewsArticleCard } from './NewsArticleCard';
 import { getSentimentColor } from '../../utils/formatters';
+import { badgeColorMap, getColor } from '../../utils/colors';
 
 interface NewsClusterViewProps {
   clusters: NewsClusterDTO[];
@@ -21,14 +22,6 @@ export function NewsClusterView({ clusters, unclustered }: NewsClusterViewProps)
     );
   }
 
-  const badgeColorMap = {
-    success: 'bg-green-100 text-green-800',
-    danger: 'bg-red-100 text-red-800',
-    neutral: 'bg-gray-100 text-gray-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    info: 'bg-blue-100 text-blue-800',
-  };
-
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-4">Related News</h2>
@@ -42,7 +35,7 @@ export function NewsClusterView({ clusters, unclustered }: NewsClusterViewProps)
               ({cluster.articleCount} {cluster.articleCount === 1 ? 'article' : 'articles'})
             </span>
             {cluster.averageSentiment && (
-              <span className={`text-xs px-2 py-0.5 rounded ${badgeColorMap[getSentimentColor(cluster.averageSentiment)]}`}>
+              <span className={`text-xs px-2 py-0.5 rounded ${badgeColorMap[getColor(getSentimentColor(cluster.averageSentiment))]}`}>
                 {cluster.averageSentiment}
               </span>
             )}

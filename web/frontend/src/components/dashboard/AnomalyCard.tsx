@@ -13,6 +13,7 @@ import {
   getAnomalyTypeColor,
   getValidationStatusColor,
 } from '../../utils/formatters';
+import { bgColorMap, badgeColorMap, getColor } from '../../utils/colors';
 
 interface AnomalyCardProps {
   anomaly: AnomalyDTO;
@@ -20,24 +21,8 @@ interface AnomalyCardProps {
 }
 
 export function AnomalyCard({ anomaly, onClick }: AnomalyCardProps) {
-  const typeColor = getAnomalyTypeColor(anomaly.anomalyType);
-  const validationColor = getValidationStatusColor(anomaly.narrative?.validationStatus || 'NOT_GENERATED');
-
-  const bgColorMap = {
-    success: 'bg-green-50 border-green-200',
-    danger: 'bg-red-50 border-red-200',
-    warning: 'bg-yellow-50 border-yellow-200',
-    info: 'bg-blue-50 border-blue-200',
-    neutral: 'bg-gray-50 border-gray-200',
-  };
-
-  const badgeColorMap = {
-    success: 'bg-green-100 text-green-800',
-    danger: 'bg-red-100 text-red-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    info: 'bg-blue-100 text-blue-800',
-    neutral: 'bg-gray-100 text-gray-800',
-  };
+  const typeColor = getColor(getAnomalyTypeColor(anomaly.anomalyType));
+  const validationColor = getColor(getValidationStatusColor(anomaly.narrative?.validationStatus || 'NOT_GENERATED'));
 
   return (
     <div

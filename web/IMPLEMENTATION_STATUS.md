@@ -4,8 +4,8 @@
 
 This document tracks the implementation progress of the Market Anomaly Narrative Engine web application.
 
-**Current Phase:** Phase 8 - Price Charts ✅ (Completed)
-**Next Phase:** Phase 9 - Historical Browser
+**Current Phase:** Phase 9 - Historical Browser ✅ (Completed)
+**Next Phase:** Phase 10 - Polish & UX
 
 ---
 
@@ -147,22 +147,33 @@ This document tracks the implementation progress of the Market Anomaly Narrative
 - [x] Route setup (/charts/:symbol?)
 - [x] Loading and error states
 
+### Phase 9: Historical Browser
+- [x] Pagination component (reusable, smart page number display)
+- [x] URL state management utilities (filtersToSearchParams, searchParamsToFilters)
+- [x] useFilterState hook (sync filters with URL)
+- [x] Filter persistence utilities (localStorage save/load/clear)
+- [x] AnomalyFilters component (symbols, date range, type, validation status)
+- [x] Collapsible symbol selector with Select All/Clear All
+- [x] Save/Load filter presets
+- [x] Clear filters with localStorage cleanup
+- [x] HistoricalBrowser page (filters sidebar + paginated results)
+- [x] Results summary display (showing X-Y of Z)
+- [x] Empty state with "Clear Filters" button
+- [x] Route setup (/history)
+- [x] Navigation menu in AppLayout (Dashboard, History, Charts)
+- [x] "Browse History" button on Dashboard
+- [x] Updated AppLayout to dark theme for consistency
+- [x] Loading and error states
+
 ---
 
 ## 🚧 In Progress
 
-(Ready to start Phase 9)
+(Ready to start Phase 10)
 
 ---
 
 ## 📋 Upcoming Phases
-
-### Phase 9: Historical Browser (Estimated: 2 days)
-- [ ] HistoricalBrowser page
-- [ ] AnomalyFilters component
-- [ ] URL state management
-- [ ] Pagination component
-- [ ] Filter persistence (localStorage)
 
 ### Phase 10: Polish & UX (Estimated: 2 days)
 - [ ] Error boundaries
@@ -251,7 +262,9 @@ src/
 │   └── AuthContext.tsx ✅
 ├── utils/
 │   ├── queryKeys.ts ✅
-│   └── formatters.ts ✅
+│   ├── formatters.ts ✅
+│   ├── urlState.ts ✅
+│   └── filterStorage.ts ✅
 ├── components/
 │   ├── dashboard/
 │   │   ├── AnomalyCard.tsx ✅
@@ -270,12 +283,19 @@ src/
 │   │   ├── PriceChart.tsx ✅
 │   │   ├── TimeRangeSelector.tsx ✅
 │   │   └── index.ts ✅
+│   ├── browser/
+│   │   ├── AnomalyFilters.tsx ✅
+│   │   └── index.ts ✅
+│   ├── common/
+│   │   ├── Pagination.tsx ✅
+│   │   └── index.ts ✅
 │   └── layout/
 │       └── AppLayout.tsx ✅
 ├── pages/
 │   ├── Dashboard.tsx ✅
 │   ├── AnomalyDetail.tsx ✅
-│   └── ChartView.tsx ✅
+│   ├── ChartView.tsx ✅
+│   └── HistoricalBrowser.tsx ✅
 ├── App.tsx ✅
 ├── main.tsx ✅
 └── index.css ✅

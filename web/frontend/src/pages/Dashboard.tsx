@@ -50,17 +50,23 @@ export function Dashboard() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Live Anomaly Feed</h2>
-            <p className="mt-1 text-sm text-gray-600">
+            <h2 className="text-2xl font-bold text-gray-100">Live Anomaly Feed</h2>
+            <p className="mt-1 text-sm text-gray-400">
               Real-time detection of crypto market anomalies
             </p>
           </div>
           <div className="flex items-center gap-3">
             <button
+              onClick={() => navigate('/history')}
+              className="px-4 py-2 bg-gray-700 text-gray-200 rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+            >
+              Browse History
+            </button>
+            <button
               onClick={() => navigate('/charts')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             >
-              📈 View Charts
+              View Charts
             </button>
             <LiveIndicator lastUpdate={lastUpdate} isPolling={!isFetching} />
           </div>

@@ -7,6 +7,7 @@ import { useAuth } from './context/AuthContext';
 import { Dashboard } from './pages/Dashboard';
 import { AnomalyDetail } from './pages/AnomalyDetail';
 import { ChartView } from './pages/ChartView';
+import { HistoricalBrowser } from './pages/HistoricalBrowser';
 
 function Login() {
   const { login } = useAuth();
@@ -201,6 +202,14 @@ function App() {
         element={
           <ProtectedRoute>
             <ChartView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/history"
+        element={
+          <ProtectedRoute>
+            <HistoricalBrowser />
           </ProtectedRoute>
         }
       />

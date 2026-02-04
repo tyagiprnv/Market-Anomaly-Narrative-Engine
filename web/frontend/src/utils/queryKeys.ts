@@ -15,9 +15,10 @@ export const queryKeys = {
     all: () => ['anomalies'] as const,
     list: (filters?: AnomalyFilters) => ['anomalies', 'list', filters] as const,
     detail: (id: string) => ['anomalies', 'detail', id] as const,
-    latest: (since?: string, symbols?: string[]) =>
-      ['anomalies', 'latest', { since, symbols }] as const,
-    stats: () => ['anomalies', 'stats'] as const,
+    latest: (request?: { since?: string; symbols?: string[] }) =>
+      ['anomalies', 'latest', request] as const,
+    stats: (filters?: Omit<AnomalyFilters, 'page' | 'limit'>) =>
+      ['anomalies', 'stats', filters] as const,
   },
 
   // News

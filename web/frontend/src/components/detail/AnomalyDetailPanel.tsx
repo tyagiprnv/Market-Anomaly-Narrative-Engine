@@ -12,21 +12,14 @@ import {
   getAnomalyTypeLabel,
   getAnomalyTypeColor,
 } from '../../utils/formatters';
+import { badgeColorMap, getColor } from '../../utils/colors';
 
 interface AnomalyDetailPanelProps {
   anomaly: AnomalyDTO;
 }
 
 export function AnomalyDetailPanel({ anomaly }: AnomalyDetailPanelProps) {
-  const typeColor = getAnomalyTypeColor(anomaly.anomalyType);
-
-  const badgeColorMap = {
-    success: 'bg-green-100 text-green-800',
-    danger: 'bg-red-100 text-red-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    info: 'bg-blue-100 text-blue-800',
-    neutral: 'bg-gray-100 text-gray-800',
-  };
+  const typeColor = getColor(getAnomalyTypeColor(anomaly.anomalyType));
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
