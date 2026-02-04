@@ -75,3 +75,11 @@ dmypy.json
 
 # Claude
 CLAUDE.md
+
+# Node.js (web application)
+node_modules/
+web/*/node_modules/
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
