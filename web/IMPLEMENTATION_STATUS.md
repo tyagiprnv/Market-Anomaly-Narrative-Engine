@@ -4,8 +4,8 @@
 
 This document tracks the implementation progress of the Market Anomaly Narrative Engine web application.
 
-**Current Phase:** Phase 5 - Config & Symbols API ✅ (Completed)
-**Next Phase:** Phase 6 - Dashboard Page
+**Current Phase:** Phase 6 - Dashboard Page ✅ (Completed)
+**Next Phase:** Phase 7 - Anomaly Detail View
 
 ---
 
@@ -107,6 +107,19 @@ This document tracks the implementation progress of the Market Anomaly Narrative
 - [x] Added PEPE-USD to supported symbols
 - [x] Fixed TypeScript rootDir issue for monorepo
 
+### Phase 6: Dashboard Page
+- [x] Query hooks (useAnomalies, useLatestAnomalies with 30s polling)
+- [x] Dashboard page layout with AppLayout component
+- [x] AnomalyCard component (displays metrics, narrative, validation)
+- [x] AnomalyList component (grid layout with empty state)
+- [x] SymbolSelector (multi-select dropdown with Select All/Clear All)
+- [x] LiveIndicator (shows connection status and last update time)
+- [x] useAnomalyStats hook for dashboard statistics
+- [x] Routing setup (/ → Dashboard, /anomalies/:id → Detail placeholder)
+- [x] Color-coded badges based on anomaly type and validation status
+- [x] Detection metadata display (timeframe windows)
+- [x] Responsive grid layout (1/2/3 columns)
+
 ---
 
 ## 🚧 In Progress
@@ -116,14 +129,6 @@ This document tracks the implementation progress of the Market Anomaly Narrative
 ---
 
 ## 📋 Upcoming Phases
-
-### Phase 6: Dashboard Page (Estimated: 3 days)
-- [ ] Query hooks (useAnomalies, useLatestAnomalies with 30s polling)
-- [ ] Dashboard page layout
-- [ ] AnomalyCard component
-- [ ] AnomalyList component
-- [ ] Symbol selector (multi-select)
-- [ ] Live indicator (last update time)
 
 ### Phase 7: Anomaly Detail View (Estimated: 2 days)
 - [ ] useAnomalyDetail hook
@@ -229,14 +234,25 @@ src/
 src/
 ├── api/
 │   ├── client.ts ✅
-│   └── queries/ (empty)
+│   └── queries/
+│       ├── anomalies.ts ✅
+│       └── index.ts ✅
 ├── context/
 │   └── AuthContext.tsx ✅
 ├── utils/
 │   ├── queryKeys.ts ✅
 │   └── formatters.ts ✅
-├── components/ (empty - to be implemented)
-├── pages/ (empty - basic login/register in App.tsx)
+├── components/
+│   ├── dashboard/
+│   │   ├── AnomalyCard.tsx ✅
+│   │   ├── AnomalyList.tsx ✅
+│   │   ├── SymbolSelector.tsx ✅
+│   │   ├── LiveIndicator.tsx ✅
+│   │   └── index.ts ✅
+│   └── layout/
+│       └── AppLayout.tsx ✅
+├── pages/
+│   └── Dashboard.tsx ✅
 ├── App.tsx ✅
 ├── main.tsx ✅
 └── index.css ✅
@@ -309,8 +325,8 @@ index.ts ✅
 
 ## Estimated Timeline
 
-- **Completed:** ~7 days (Phase 0-4)
-- **Remaining:** ~16-21 days (Phase 5-12)
+- **Completed:** ~10 days (Phase 0-6)
+- **Remaining:** ~13-18 days (Phase 7-12)
 - **Total:** ~5-6 weeks for full-featured MVP
 
 ---

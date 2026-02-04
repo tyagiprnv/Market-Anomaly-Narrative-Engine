@@ -4,13 +4,14 @@
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { Dashboard } from './pages/Dashboard';
 
-// Placeholder components - will be implemented in next phases
-function Dashboard() {
+// Placeholder for Phase 7
+function AnomalyDetail() {
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-      <p className="mt-4 text-gray-600">Live anomaly feed will appear here</p>
+      <h1 className="text-3xl font-bold text-gray-900">Anomaly Detail</h1>
+      <p className="mt-4 text-gray-600">Detailed view will appear here (Phase 7)</p>
     </div>
   );
 }
@@ -192,6 +193,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/anomalies/:id"
+        element={
+          <ProtectedRoute>
+            <AnomalyDetail />
           </ProtectedRoute>
         }
       />
