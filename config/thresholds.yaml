@@ -1,0 +1,79 @@
+# Asset-Aware Anomaly Detection Thresholds
+# ==========================================
+# This file defines volatility tiers and asset-specific overrides
+# for multi-timeframe anomaly detection.
+
+# Global defaults (fallback if asset not found)
+global_defaults:
+  z_score_threshold: 3.0
+  volume_z_threshold: 2.5
+  bollinger_std_multiplier: 2.0
+
+# Volatility tiers with multipliers
+# Z-score threshold = global_default × multiplier
+volatility_tiers:
+  stable:
+    description: "Major cryptocurrencies with lower volatility"
+    multiplier: 1.2  # 3.0 × 1.2 = 3.6
+    assets:
+      - BTC-USD
+      - ETH-USD
+
+  moderate:
+    description: "Major altcoins with medium volatility"
+    multiplier: 1.0  # 3.0 × 1.0 = 3.0 (baseline)
+    assets:
+      - BNB-USD
+      - SOL-USD
+      - XRP-USD
+      - ADA-USD
+      - AVAX-USD
+      - DOT-USD
+      - MATIC-USD
+      - LINK-USD
+      - UNI-USD
+      - ATOM-USD
+      - LTC-USD
+      - ETC-USD
+      - XLM-USD
+      - ALGO-USD
+      - VET-USD
+      - ICP-USD
+      - FIL-USD
+
+  volatile:
+    description: "Meme coins and highly volatile assets"
+    multiplier: 0.7  # 3.0 × 0.7 = 2.1
+    assets:
+      - DOGE-USD
+      - SHIB-USD
+      - PEPE-USD
+
+# Asset-specific overrides (highest priority)
+# These override both global defaults and tier multipliers
+asset_specific_thresholds:
+  BTC-USD:
+    z_score_threshold: 3.5
+    volume_z_threshold: 2.8
+    description: "Bitcoin: Most stable, requires higher threshold"
+
+  DOGE-USD:
+    z_score_threshold: 2.0
+    volume_z_threshold: 2.0
+    description: "Dogecoin: Highly volatile meme coin"
+
+# Multi-timeframe configuration
+timeframes:
+  enabled: true
+  windows: [5, 15, 30, 60]  # minutes
+  description: "Detect anomalies across multiple timeframes"
+
+  # Baseline window calculation: window_duration × baseline_multiplier
+  # Example: 10-min window → 30-min baseline (10 × 3)
+  baseline_multiplier: 3
+
+# Cumulative detection settings
+cumulative:
+  enabled: true
+  min_periods: 3  # Minimum data points required for cumulative calculation
+  description: "Detect slow burns (cumulative price changes over time)"

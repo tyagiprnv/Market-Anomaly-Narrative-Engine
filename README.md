@@ -5,7 +5,7 @@
 MANE solves a critical problem in quantitative finance: dashboards tell you *what* changed, but rarely *why*. Traditional LLMs hallucinate connections between unrelated events. MANE doesn't.
 
 **How it works:**
-1. **Statistical Detection** - Z-score, Bollinger Bands, volume spikes (deterministic)
+1. **Statistical Detection** - Multi-timeframe + asset-aware anomaly detection (BTC ≠ DOGE)
 2. **Time-Windowed News** - Links anomalies to news within ±30 minutes (causal filtering)
 3. **AI Investigation** - LLM agent with tools investigates and writes narratives
 4. **Validation** - Rule-based + Judge LLM verify plausibility (or return "Unknown")
@@ -110,12 +110,28 @@ mane metrics
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### Key Features
+
+**🎯 Multi-Timeframe Detection** - Detects cumulative price changes that appear normal minute-by-minute:
+- Example: DOGE +0.5%/min for 10 minutes = +5% total → **NOW DETECTED** ✓
+- Previously: Each minute (Z-score ~0.8) looked normal → **MISSED** ✗
+- Analyzes 5/15/30/60 minute windows in parallel, returns highest confidence
+
+**🎨 Asset-Aware Thresholds** - Different cryptocurrencies have different volatility profiles:
+- **BTC** (stable): Requires Z-score > 3.5 (filters noise, reduces false positives)
+- **DOGE** (volatile): Requires Z-score > 2.0 (more sensitive to meme coin swings)
+- **SOL/XRP** (moderate): Baseline Z-score 3.0 (standard 3-sigma)
+- Configured via `config/thresholds.yaml` with 3-tier priority (override > tier > global)
+
 ### Key Components
 
 ```
 src/
 ├── phase1_detector/        # Statistical detection, news aggregation, clustering
-│   ├── anomaly_detection/  # Z-score, Bollinger, volume, combined detectors
+│   ├── anomaly_detection/  # Multi-timeframe + asset-aware detection
+│   │   ├── statistical.py      # MultiTimeframe, ZScore, Bollinger, Volume, Combined
+│   │   ├── asset_profiles.py   # 3-tier threshold lookup (override > tier > global)
+│   │   └── models.py            # DetectedAnomaly with detection_metadata
 │   ├── data_ingestion/     # Coinbase & Binance API clients
 │   ├── news_aggregation/   # RSS (free) + CryptoPanic, NewsAPI, Grok (paid)
 │   │   ├── rss_client.py      # Free RSS feeds (CoinDesk, Cointelegraph, etc.)
@@ -164,13 +180,38 @@ DETECTION__NEWS_WINDOW_MINUTES=30    # News search window
 VALIDATION__PASS_THRESHOLD=0.65      # Validation threshold
 ```
 
-**Per-Asset Tuning** (`config/thresholds.yaml`):
+**Asset-Aware Thresholds** (`config/thresholds.yaml`):
 ```yaml
+# Volatility tiers (multiplier applied to global defaults)
+volatility_tiers:
+  stable:    # BTC, ETH
+    multiplier: 1.2  # 3.0 × 1.2 = 3.6
+  moderate:  # SOL, XRP, ADA, etc.
+    multiplier: 1.0  # 3.0 × 1.0 = 3.0 (baseline)
+  volatile:  # DOGE, SHIB, PEPE
+    multiplier: 0.7  # 3.0 × 0.7 = 2.1
+
+# Asset-specific overrides (highest priority)
 asset_specific_thresholds:
   BTC-USD:
-    z_score: 3.5  # Higher threshold for stable assets
+    z_score_threshold: 3.5  # Overrides tier multiplier
   DOGE-USD:
-    z_score: 2.5  # Lower threshold for volatile assets
+    z_score_threshold: 2.0  # Highly volatile meme coin
+
+# Multi-timeframe detection
+timeframes:
+  enabled: true
+  windows: [5, 15, 30, 60]  # Analyze multiple timeframes in parallel
+  baseline_multiplier: 3    # Baseline = window × 3 (excludes current move)
+```
+
+**Feature Flags** (`.env`):
+```bash
+# Enable multi-timeframe detection (detects cumulative "slow burns")
+DETECTION__ENABLE_MULTI_TIMEFRAME=true
+
+# Use asset-specific thresholds from config/thresholds.yaml
+DETECTION__USE_ASSET_SPECIFIC_THRESHOLDS=true
 ```
 
 ## Development

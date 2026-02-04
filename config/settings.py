@@ -3,6 +3,8 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal
+from pathlib import Path
+import yaml
 
 
 class DatabaseSettings(BaseSettings):
@@ -68,6 +70,18 @@ class DetectionSettings(BaseSettings):
     lookback_window_minutes: int = 60
     news_window_minutes: int = 30
 
+    # Asset-aware detection
+    use_asset_specific_thresholds: bool = True
+    thresholds_config_path: str = "config/thresholds.yaml"
+
+    # Multi-timeframe detection
+    enable_multi_timeframe: bool = True
+    timeframe_windows: list[int] = Field(default=[5, 15, 30, 60])
+
+    # Cumulative detection
+    enable_cumulative_detection: bool = True
+    cumulative_min_periods: int = 3
+
     # Crypto assets to monitor
     symbols: list[str] = Field(
         default=[
@@ -93,6 +107,19 @@ class DetectionSettings(BaseSettings):
             "FIL-USD",
         ]
     )
+
+    def load_thresholds_config(self) -> dict | None:
+        """Load YAML thresholds configuration.
+
+        Returns:
+            Dict with threshold config or None if file doesn't exist
+        """
+        config_file = Path(self.thresholds_config_path)
+        if not config_file.exists():
+            return None
+
+        with open(config_file, "r") as f:
+            return yaml.safe_load(f)
 
 
 class DataIngestionSettings(BaseSettings):

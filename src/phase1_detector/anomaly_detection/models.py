@@ -34,6 +34,9 @@ class DetectedAnomaly(BaseModel):
     volume_before: float = 0.0
     volume_at_detection: float = 0.0
 
+    # Detection metadata (multi-timeframe, asset-aware)
+    detection_metadata: dict = Field(default_factory=dict)
+
     class Config:
         json_schema_extra = {
             "example": {

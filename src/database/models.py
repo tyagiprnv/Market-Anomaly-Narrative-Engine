@@ -82,6 +82,9 @@ class Anomaly(Base):
     volume_before = Column(Float)
     volume_at_detection = Column(Float)
 
+    # Detection metadata (multi-timeframe, asset-aware)
+    detection_metadata = Column(JSON, nullable=True)
+
     # Relationships
     news_articles = relationship("NewsArticle", back_populates="anomaly", cascade="all, delete-orphan")
     narrative = relationship("Narrative", back_populates="anomaly", uselist=False, cascade="all, delete-orphan")
