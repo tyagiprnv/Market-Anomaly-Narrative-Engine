@@ -2,7 +2,8 @@
  * Main application component with routing
  */
 
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { Dashboard } from './pages/Dashboard';
 import { AnomalyDetail } from './pages/AnomalyDetail';
@@ -11,17 +12,29 @@ import { HistoricalBrowser } from './pages/HistoricalBrowser';
 
 function Login() {
   const { login } = useAuth();
+  const navigate = useNavigate();
+  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
+
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
     try {
       await login(email, password);
-    } catch (error) {
+      // Success - redirect to dashboard
+      console.log('Login successful, redirecting to dashboard...');
+      navigate('/', { replace: true });
+    } catch (error: any) {
       console.error('Login failed:', error);
+      setError(error.response?.data?.message || error.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,6 +50,12 @@ function Login() {
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
+
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">
@@ -47,6 +66,7 @@ function Login() {
                 name="email"
                 type="email"
                 required
+                disabled={loading}
                 className="input rounded-t-md rounded-b-none"
                 placeholder="Email address"
               />
@@ -60,6 +80,7 @@ function Login() {
                 name="password"
                 type="password"
                 required
+                disabled={loading}
                 className="input rounded-b-md rounded-t-none"
                 placeholder="Password"
               />
@@ -67,8 +88,8 @@ function Login() {
           </div>
 
           <div>
-            <button type="submit" className="btn btn-primary w-full">
-              Sign in
+            <button type="submit" disabled={loading} className="btn btn-primary w-full">
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
 
@@ -85,17 +106,29 @@ function Login() {
 
 function Register() {
   const { register } = useAuth();
+  const navigate = useNavigate();
+  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
+
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
     try {
       await register(email, password);
-    } catch (error) {
+      // Success - redirect to dashboard
+      console.log('Registration successful, redirecting to dashboard...');
+      navigate('/', { replace: true });
+    } catch (error: any) {
       console.error('Registration failed:', error);
+      setError(error.response?.data?.message || error.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -108,6 +141,12 @@ function Register() {
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
+
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">
@@ -118,6 +157,7 @@ function Register() {
                 name="email"
                 type="email"
                 required
+                disabled={loading}
                 className="input rounded-t-md rounded-b-none"
                 placeholder="Email address"
               />
@@ -132,6 +172,7 @@ function Register() {
                 type="password"
                 required
                 minLength={8}
+                disabled={loading}
                 className="input rounded-b-md rounded-t-none"
                 placeholder="Password (min 8 characters)"
               />
@@ -139,8 +180,8 @@ function Register() {
           </div>
 
           <div>
-            <button type="submit" className="btn btn-primary w-full">
-              Register
+            <button type="submit" disabled={loading} className="btn btn-primary w-full">
+              {loading ? 'Creating account...' : 'Register'}
             </button>
           </div>
 

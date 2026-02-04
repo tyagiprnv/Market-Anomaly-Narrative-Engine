@@ -36,11 +36,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      console.log('Login mutation starting...');
       const response = await apiClient.post('/auth/login', { email, password });
+      console.log('Login response:', response.data);
       return response.data.user;
     },
     onSuccess: (user) => {
+      console.log('Login successful, setting user:', user);
       queryClient.setQueryData(queryKeys.auth.me(), user);
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
+    },
+    onError: (error: any) => {
+      console.error('Login error:', error);
     },
   });
 
