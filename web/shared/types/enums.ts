@@ -12,7 +12,8 @@ export enum AnomalyType {
 export enum ValidationStatus {
   VALID = 'VALID',
   INVALID = 'INVALID',
-  UNVALIDATED = 'UNVALIDATED',
+  PENDING = 'PENDING',
+  NOT_GENERATED = 'NOT_GENERATED',
 }
 
 export enum NewsSentiment {

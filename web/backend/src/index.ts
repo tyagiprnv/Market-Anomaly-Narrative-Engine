@@ -14,6 +14,7 @@ import { apiLimiter } from './middleware/rateLimit';
 // Import routes
 import authRoutes from './routes/auth.routes';
 import healthRoutes from './routes/health.routes';
+import anomalyRoutes from './routes/anomaly.routes';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api', apiLimiter);
 // Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/anomalies', anomalyRoutes);
 
 // Error handling
 app.use(notFoundHandler);

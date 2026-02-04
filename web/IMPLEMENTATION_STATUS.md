@@ -4,8 +4,8 @@
 
 This document tracks the implementation progress of the Market Anomaly Narrative Engine web application.
 
-**Current Phase:** Phase 1 - Backend Skeleton ✅ (Completed)
-**Next Phase:** Phase 2 - Database Setup & Testing
+**Current Phase:** Phase 3 - Core API - Anomalies ✅ (Completed)
+**Next Phase:** Phase 4 - Core API - News & Prices
 
 ---
 
@@ -58,30 +58,36 @@ This document tracks the implementation progress of the Market Anomaly Narrative
 - [x] Formatters (date, price, percent, etc.)
 - [x] Color utilities for badges
 
+### Phase 2: Database Setup & Testing
+- [x] Run SQL migration to add `users` table
+- [x] Introspect database schema with Prisma (`npx prisma db pull`)
+- [x] Generate Prisma client (`npx prisma generate`)
+- [x] Test backend startup and health endpoint
+- [x] Test authentication flow (register → login → /me)
+
+### Phase 3: Core API - Anomalies
+- [x] Added `detection_metadata` column to anomalies table
+- [x] DTO transformers (DB model → API response)
+- [x] Anomaly service (Prisma queries with filters)
+- [x] GET /api/anomalies (filters: symbol, date range, type, validation, pagination)
+- [x] GET /api/anomalies/:id (eager load news, narrative, clusters)
+- [x] GET /api/anomalies/latest (efficient polling query)
+- [x] GET /api/anomalies/stats
+- [x] Validation schemas (Zod)
+- [x] Anomaly controller and routes
+- [x] All routes protected with authentication
+- [x] Test coverage (manual testing with curl)
+
 ---
 
 ## 🚧 In Progress
 
-### Phase 2: Database Setup & Testing
-- [ ] Run SQL migration to add `users` table
-- [ ] Introspect database schema with Prisma (`npx prisma db pull`)
-- [ ] Generate Prisma client (`npx prisma generate`)
-- [ ] Test backend startup and health endpoint
-- [ ] Test authentication flow (register → login → /me)
+### Phase 4: Core API - News & Prices
+(Ready to begin)
 
 ---
 
 ## 📋 Upcoming Phases
-
-### Phase 3: Core API - Anomalies (Estimated: 3 days)
-- [ ] Anomaly service (Prisma queries with filters)
-- [ ] DTO transformers (DB model → API response)
-- [ ] GET /api/anomalies (filters: symbol, date range, type, validation, pagination)
-- [ ] GET /api/anomalies/:id (eager load news, narrative, clusters)
-- [ ] GET /api/anomalies/latest (efficient polling query)
-- [ ] GET /api/anomalies/stats
-- [ ] Anomaly controller and routes
-- [ ] Test coverage (unit + integration)
 
 ### Phase 4: Core API - News & Prices (Estimated: 2 days)
 - [ ] News service (queries + clustering logic)
