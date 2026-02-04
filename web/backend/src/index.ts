@@ -17,6 +17,8 @@ import healthRoutes from './routes/health.routes';
 import anomalyRoutes from './routes/anomaly.routes';
 import newsRoutes from './routes/news.routes';
 import priceRoutes from './routes/price.routes';
+import symbolsRoutes from './routes/symbols.routes';
+import configRoutes from './routes/config.routes';
 
 const app = express();
 
@@ -49,6 +51,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/anomalies', anomalyRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/prices', priceRoutes);
+app.use('/api/symbols', symbolsRoutes);
+app.use('/api/config', configRoutes);
 
 // Error handling
 app.use(notFoundHandler);

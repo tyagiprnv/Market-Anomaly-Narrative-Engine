@@ -31,6 +31,7 @@ export const SYMBOL_VOLATILITY_TIERS: Record<SupportedSymbol, VolatilityTier> = 
   // Volatile (0.7x multiplier)
   'DOGE-USD': VolatilityTier.VOLATILE,
   'SHIB-USD': VolatilityTier.VOLATILE,
+  'PEPE-USD': VolatilityTier.VOLATILE,
 };
 
 export const DEFAULT_THRESHOLDS = {
