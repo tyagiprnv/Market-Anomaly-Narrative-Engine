@@ -3,3 +3,4 @@
  */
 
 export * from './anomalies';
+export * from './prices';

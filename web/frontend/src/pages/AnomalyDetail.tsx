@@ -4,12 +4,14 @@
 
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAnomaly } from '../api/queries/anomalies';
+import { usePriceHistory } from '../api/queries/prices';
 import { AppLayout } from '../components/layout/AppLayout';
 import {
   AnomalyDetailPanel,
   NarrativeDisplay,
   NewsClusterView,
 } from '../components/detail';
+import { PriceChart } from '../components/charts';
 
 export function AnomalyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -56,6 +58,18 @@ export function AnomalyDetail() {
     (article) => !article.clusterId
   );
 
+  // Fetch price history around the anomaly (6 hours before to 1 hour after)
+  const anomalyTime = new Date(anomaly.detectedAt);
+  const startDate = new Date(anomalyTime.getTime() - 6 * 60 * 60 * 1000).toISOString(); // 6 hours before
+  const endDate = new Date(anomalyTime.getTime() + 1 * 60 * 60 * 1000).toISOString(); // 1 hour after
+
+  const { data: priceData, isLoading: isPriceLoading } = usePriceHistory({
+    symbol: anomaly.symbol,
+    startDate,
+    endDate,
+    granularity: '5m', // 5-minute granularity for detailed view
+  });
+
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto">
@@ -72,6 +86,29 @@ export function AnomalyDetail() {
         <div className="space-y-6">
           {/* Anomaly metrics and metadata */}
           <AnomalyDetailPanel anomaly={anomaly} />
+
+          {/* Price chart */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Price Context</h2>
+              <button
+                onClick={() => navigate(`/charts/${anomaly.symbol}`)}
+                className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                View full chart →
+              </button>
+            </div>
+            <PriceChart
+              data={priceData?.data ?? []}
+              symbol={anomaly.symbol}
+              anomalies={[anomaly]}
+              height={400}
+              isLoading={isPriceLoading}
+            />
+            <p className="mt-2 text-xs text-gray-500">
+              Showing 6 hours before to 1 hour after the anomaly
+            </p>
+          </div>
 
           {/* Narrative (if exists) */}
           {anomaly.narrative && <NarrativeDisplay narrative={anomaly.narrative} />}

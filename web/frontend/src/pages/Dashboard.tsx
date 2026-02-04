@@ -55,7 +55,15 @@ export function Dashboard() {
               Real-time detection of crypto market anomalies
             </p>
           </div>
-          <LiveIndicator lastUpdate={lastUpdate} isPolling={!isFetching} />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/charts')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              📈 View Charts
+            </button>
+            <LiveIndicator lastUpdate={lastUpdate} isPolling={!isFetching} />
+          </div>
         </div>
 
         {/* Filters and Stats */}

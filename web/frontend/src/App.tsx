@@ -6,6 +6,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { Dashboard } from './pages/Dashboard';
 import { AnomalyDetail } from './pages/AnomalyDetail';
+import { ChartView } from './pages/ChartView';
 
 function Login() {
   const { login } = useAuth();
@@ -192,6 +193,14 @@ function App() {
         element={
           <ProtectedRoute>
             <AnomalyDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/charts/:symbol?"
+        element={
+          <ProtectedRoute>
+            <ChartView />
           </ProtectedRoute>
         }
       />

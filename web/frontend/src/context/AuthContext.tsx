@@ -2,8 +2,8 @@
  * Authentication context - manages auth state and provides hooks
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserDTO } from '@mane/shared';
+import React, { createContext, useContext } from 'react';
+import { UserDTO } from '@mane/shared/types/database';
 import apiClient from '../api/client';
 import { queryKeys } from '../utils/queryKeys';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

@@ -5,6 +5,9 @@
 import { AnomalyDTO, NewsArticleDTO, NewsClusterDTO, UserDTO } from './database';
 import { AnomalyType, ValidationStatus, NewsSentiment, NewsTiming } from './enums';
 
+// Re-export database types for convenience
+export type { AnomalyDTO, NewsArticleDTO, NewsClusterDTO, UserDTO };
+
 // Pagination
 export interface PaginationMeta {
   page: number;

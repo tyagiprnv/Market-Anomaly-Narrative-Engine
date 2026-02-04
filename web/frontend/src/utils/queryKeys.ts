@@ -2,7 +2,7 @@
  * React Query key factory for consistent cache keys
  */
 
-import { AnomalyFilters, NewsFilters } from '@mane/shared';
+import { AnomalyFilters, NewsFilters } from '@mane/shared/types/api';
 
 export const queryKeys = {
   // Auth

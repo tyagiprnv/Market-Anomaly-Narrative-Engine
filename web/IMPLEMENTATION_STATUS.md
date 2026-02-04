@@ -4,8 +4,8 @@
 
 This document tracks the implementation progress of the Market Anomaly Narrative Engine web application.
 
-**Current Phase:** Phase 7 - Anomaly Detail View ✅ (Completed)
-**Next Phase:** Phase 8 - Price Charts
+**Current Phase:** Phase 8 - Price Charts ✅ (Completed)
+**Next Phase:** Phase 9 - Historical Browser
 
 ---
 
@@ -133,24 +133,29 @@ This document tracks the implementation progress of the Market Anomaly Narrative
 - [x] Fixed AnomalyCard to use correct DTO structure
 - [x] Integrated detail page into routing
 
+### Phase 8: Price Charts
+- [x] Installed lightweight-charts package
+- [x] usePriceHistory hook with date range and granularity support
+- [x] PriceChart component (TradingView Lightweight Charts)
+- [x] Anomaly markers on chart with timeframe info
+- [x] Custom chart styling (dark theme)
+- [x] Responsive chart container with auto-resize
+- [x] TimeRangeSelector component (1H, 6H, 24H, 7D, 30D)
+- [x] ChartView page (full-screen chart with symbol selector)
+- [x] Integrated chart into AnomalyDetail page (6h before to 1h after)
+- [x] "View Charts" button on Dashboard
+- [x] Route setup (/charts/:symbol?)
+- [x] Loading and error states
+
 ---
 
 ## 🚧 In Progress
 
-(Ready to start Phase 8)
+(Ready to start Phase 9)
 
 ---
 
 ## 📋 Upcoming Phases
-
-### Phase 8: Price Charts (Estimated: 3 days)
-- [ ] Lightweight Charts integration
-- [ ] usePriceHistory hook
-- [ ] PriceChart component (line chart)
-- [ ] Anomaly markers on chart
-- [ ] Custom tooltip
-- [ ] ChartView page (full-screen)
-- [ ] Responsive chart container
 
 ### Phase 9: Historical Browser (Estimated: 2 days)
 - [ ] HistoricalBrowser page
@@ -240,6 +245,7 @@ src/
 │   ├── client.ts ✅
 │   └── queries/
 │       ├── anomalies.ts ✅
+│       ├── prices.ts ✅
 │       └── index.ts ✅
 ├── context/
 │   └── AuthContext.tsx ✅
@@ -260,11 +266,16 @@ src/
 │   │   ├── NewsClusterView.tsx ✅
 │   │   ├── NewsArticleCard.tsx ✅
 │   │   └── index.ts ✅
+│   ├── charts/
+│   │   ├── PriceChart.tsx ✅
+│   │   ├── TimeRangeSelector.tsx ✅
+│   │   └── index.ts ✅
 │   └── layout/
 │       └── AppLayout.tsx ✅
 ├── pages/
 │   ├── Dashboard.tsx ✅
-│   └── AnomalyDetail.tsx ✅
+│   ├── AnomalyDetail.tsx ✅
+│   └── ChartView.tsx ✅
 ├── App.tsx ✅
 ├── main.tsx ✅
 └── index.css ✅
@@ -337,9 +348,9 @@ index.ts ✅
 
 ## Estimated Timeline
 
-- **Completed:** ~12 days (Phase 0-7)
-- **Remaining:** ~11-16 days (Phase 8-12)
-- **Total:** ~5-6 weeks for full-featured MVP
+- **Completed:** ~15 days (Phase 0-8)
+- **Remaining:** ~8-13 days (Phase 9-12)
+- **Total:** ~4-5 weeks for full-featured MVP
 
 ---
 
