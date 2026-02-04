@@ -25,7 +25,8 @@ export interface AuthResult {
   user: {
     id: string;
     email: string;
-    createdAt: Date;
+    createdAt: string;
+    updatedAt: string;
   };
 }
 
@@ -64,7 +65,8 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
     user: {
       id: user.id,
       email: user.email,
-      createdAt: user.created_at,
+      createdAt: user.created_at?.toISOString() || new Date().toISOString(),
+      updatedAt: user.updated_at?.toISOString() || new Date().toISOString(),
     },
   };
 }
@@ -99,7 +101,8 @@ export async function loginUser(input: LoginInput): Promise<AuthResult> {
     user: {
       id: user.id,
       email: user.email,
-      createdAt: user.created_at,
+      createdAt: user.created_at?.toISOString() || new Date().toISOString(),
+      updatedAt: user.updated_at?.toISOString() || new Date().toISOString(),
     },
   };
 }

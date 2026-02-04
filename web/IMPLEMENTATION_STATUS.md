@@ -4,8 +4,8 @@
 
 This document tracks the implementation progress of the Market Anomaly Narrative Engine web application.
 
-**Current Phase:** Phase 3 - Core API - Anomalies ✅ (Completed)
-**Next Phase:** Phase 4 - Core API - News & Prices
+**Current Phase:** Phase 4 - Core API - News & Prices ✅ (Completed)
+**Next Phase:** Phase 5 - Config & Symbols API
 
 ---
 
@@ -78,24 +78,30 @@ This document tracks the implementation progress of the Market Anomaly Narrative
 - [x] All routes protected with authentication
 - [x] Test coverage (manual testing with curl)
 
+### Phase 4: Core API - News & Prices
+- [x] News service (Prisma queries with filters)
+- [x] GET /api/news (filters: symbol, anomalyId, date range, pagination)
+- [x] GET /api/news/clusters/:anomalyId (get clusters with articles)
+- [x] Price transformer (DB model → API response)
+- [x] Price service (auto-aggregation: 1m/5m/1h/1d based on date range)
+- [x] GET /api/prices/:symbol (date range, aggregation level)
+- [x] GET /api/prices/:symbol/latest (latest price for symbol)
+- [x] Validation schemas (Zod)
+- [x] News and Price controllers
+- [x] News and Price routes with authentication
+- [x] Test coverage (manual testing with curl)
+- [x] Fixed PaginatedResponse to use `meta` instead of `pagination`
+
 ---
 
 ## 🚧 In Progress
 
-### Phase 4: Core API - News & Prices
+### Phase 5: Config & Symbols API
 (Ready to begin)
 
 ---
 
 ## 📋 Upcoming Phases
-
-### Phase 4: Core API - News & Prices (Estimated: 2 days)
-- [ ] News service (queries + clustering logic)
-- [ ] GET /api/news (filters)
-- [ ] GET /api/news/clusters/:anomalyId
-- [ ] Price service (history with auto-aggregation)
-- [ ] GET /api/prices/:symbol
-- [ ] Test coverage
 
 ### Phase 5: Config & Symbols API (Estimated: 1 day)
 - [ ] Thresholds service (parse `config/thresholds.yaml`)
@@ -176,11 +182,27 @@ src/
 │   └── rateLimit.ts ✅
 ├── routes/
 │   ├── auth.routes.ts ✅
-│   └── health.routes.ts ✅
+│   ├── health.routes.ts ✅
+│   ├── anomaly.routes.ts ✅
+│   ├── news.routes.ts ✅
+│   └── price.routes.ts ✅
 ├── controllers/
-│   └── auth.controller.ts ✅
+│   ├── auth.controller.ts ✅
+│   ├── anomaly.controller.ts ✅
+│   ├── news.controller.ts ✅
+│   └── price.controller.ts ✅
 ├── services/
-│   └── auth.service.ts ✅
+│   ├── auth.service.ts ✅
+│   ├── anomaly.service.ts ✅
+│   ├── news.service.ts ✅
+│   └── price.service.ts ✅
+├── schemas/
+│   ├── anomaly.schemas.ts ✅
+│   ├── news.schemas.ts ✅
+│   └── price.schemas.ts ✅
+├── transformers/
+│   ├── anomaly.transformer.ts ✅
+│   └── price.transformer.ts ✅
 ├── utils/
 │   ├── logger.ts ✅
 │   ├── jwt.ts ✅
@@ -273,9 +295,9 @@ index.ts ✅
 
 ## Estimated Timeline
 
-- **Completed:** ~5 days (Phase 0-1.8)
-- **Remaining:** ~18-23 days (Phase 2-12)
-- **Total:** ~6-7 weeks for full-featured MVP
+- **Completed:** ~7 days (Phase 0-4)
+- **Remaining:** ~16-21 days (Phase 5-12)
+- **Total:** ~5-6 weeks for full-featured MVP
 
 ---
 

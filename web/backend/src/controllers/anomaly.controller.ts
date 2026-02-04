@@ -17,13 +17,13 @@ import logger from '../utils/logger';
  * Get all anomalies with optional filters and pagination
  */
 export async function getAnomalies(
-  req: Request<{}, {}, {}, GetAnomaliesQuery>,
+  req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
     const { page, limit, symbol, symbols, anomalyType, validationStatus, startDate, endDate } =
-      req.query;
+      req.query as unknown as GetAnomaliesQuery;
 
     const filters = {
       symbol,
@@ -37,7 +37,7 @@ export async function getAnomalies(
     const result = await anomalyService.findAll(filters, page, limit);
 
     logger.info(
-      `Retrieved ${result.data.length} anomalies (page ${page}/${result.pagination.totalPages})`
+      `Retrieved ${result.data.length} anomalies (page ${page}/${result.meta.totalPages})`
     );
 
     res.json(result);
@@ -52,12 +52,12 @@ export async function getAnomalies(
  * Get single anomaly by ID with all related data
  */
 export async function getAnomalyById(
-  req: Request<GetAnomalyByIdParams>,
+  req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const { id } = req.params;
+    const { id } = req.params as GetAnomalyByIdParams;
 
     const anomaly = await anomalyService.findById(id);
 
@@ -81,12 +81,12 @@ export async function getAnomalyById(
  * Get anomalies detected after a given timestamp (for polling)
  */
 export async function getLatestAnomalies(
-  req: Request<{}, {}, {}, GetLatestAnomaliesQuery>,
+  req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const { since, symbols } = req.query;
+    const { since, symbols } = req.query as unknown as GetLatestAnomaliesQuery;
 
     const anomalies = await anomalyService.findLatest(since, symbols);
 
@@ -103,12 +103,12 @@ export async function getLatestAnomalies(
  * Get anomaly statistics
  */
 export async function getAnomalyStats(
-  req: Request<{}, {}, {}, GetStatsQuery>,
+  req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const { symbols } = req.query;
+    const { symbols } = req.query as GetStatsQuery;
 
     const stats = await anomalyService.getStats(symbols);
 

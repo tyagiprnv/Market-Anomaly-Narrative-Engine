@@ -113,11 +113,11 @@ export async function findAll(
     }),
   ]);
 
-  const pagination = calculatePagination(page, limit, total);
+  const meta = calculatePagination(page, limit, total);
 
   return {
     data: anomalies.map(toAnomalyDTO),
-    pagination,
+    meta,
   };
 }
 
