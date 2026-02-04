@@ -4,8 +4,8 @@
 
 This document tracks the implementation progress of the Market Anomaly Narrative Engine web application.
 
-**Current Phase:** Phase 6 - Dashboard Page ✅ (Completed)
-**Next Phase:** Phase 7 - Anomaly Detail View
+**Current Phase:** Phase 7 - Anomaly Detail View ✅ (Completed)
+**Next Phase:** Phase 8 - Price Charts
 
 ---
 
@@ -120,24 +120,28 @@ This document tracks the implementation progress of the Market Anomaly Narrative
 - [x] Detection metadata display (timeframe windows)
 - [x] Responsive grid layout (1/2/3 columns)
 
+### Phase 7: Anomaly Detail View
+- [x] useAnomaly hook (already existed from Phase 3)
+- [x] AnomalyDetail page layout
+- [x] AnomalyDetailPanel (metrics, metadata, detection info)
+- [x] NarrativeDisplay component (narrative text with confidence and validation)
+- [x] ValidationBadge component (color-coded status with icons)
+- [x] NewsClusterView component (groups articles by cluster)
+- [x] NewsArticleCard component (displays article with source, timing, sentiment)
+- [x] Back button navigation to dashboard
+- [x] Error handling (loading states, not found)
+- [x] Fixed AnomalyCard to use correct DTO structure
+- [x] Integrated detail page into routing
+
 ---
 
 ## 🚧 In Progress
 
-(No active phase)
+(Ready to start Phase 8)
 
 ---
 
 ## 📋 Upcoming Phases
-
-### Phase 7: Anomaly Detail View (Estimated: 2 days)
-- [ ] useAnomalyDetail hook
-- [ ] AnomalyDetail page layout
-- [ ] AnomalyDetailPanel (metrics, metadata)
-- [ ] NarrativeDisplay component
-- [ ] ValidationBadge component
-- [ ] NewsClusterView component
-- [ ] NewsArticleCard component
 
 ### Phase 8: Price Charts (Estimated: 3 days)
 - [ ] Lightweight Charts integration
@@ -249,10 +253,18 @@ src/
 │   │   ├── SymbolSelector.tsx ✅
 │   │   ├── LiveIndicator.tsx ✅
 │   │   └── index.ts ✅
+│   ├── detail/
+│   │   ├── AnomalyDetailPanel.tsx ✅
+│   │   ├── NarrativeDisplay.tsx ✅
+│   │   ├── ValidationBadge.tsx ✅
+│   │   ├── NewsClusterView.tsx ✅
+│   │   ├── NewsArticleCard.tsx ✅
+│   │   └── index.ts ✅
 │   └── layout/
 │       └── AppLayout.tsx ✅
 ├── pages/
-│   └── Dashboard.tsx ✅
+│   ├── Dashboard.tsx ✅
+│   └── AnomalyDetail.tsx ✅
 ├── App.tsx ✅
 ├── main.tsx ✅
 └── index.css ✅
@@ -325,8 +337,8 @@ index.ts ✅
 
 ## Estimated Timeline
 
-- **Completed:** ~10 days (Phase 0-6)
-- **Remaining:** ~13-18 days (Phase 7-12)
+- **Completed:** ~12 days (Phase 0-7)
+- **Remaining:** ~11-16 days (Phase 8-12)
 - **Total:** ~5-6 weeks for full-featured MVP
 
 ---

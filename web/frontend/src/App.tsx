@@ -5,16 +5,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { Dashboard } from './pages/Dashboard';
-
-// Placeholder for Phase 7
-function AnomalyDetail() {
-  return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-900">Anomaly Detail</h1>
-      <p className="mt-4 text-gray-600">Detailed view will appear here (Phase 7)</p>
-    </div>
-  );
-}
+import { AnomalyDetail } from './pages/AnomalyDetail';
 
 function Login() {
   const { login } = useAuth();

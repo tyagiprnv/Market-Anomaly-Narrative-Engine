@@ -20,8 +20,8 @@ interface AnomalyCardProps {
 }
 
 export function AnomalyCard({ anomaly, onClick }: AnomalyCardProps) {
-  const typeColor = getAnomalyTypeColor(anomaly.type);
-  const validationColor = getValidationStatusColor(anomaly.validation_status || 'UNVALIDATED');
+  const typeColor = getAnomalyTypeColor(anomaly.anomalyType);
+  const validationColor = getValidationStatusColor(anomaly.narrative?.validationStatus || 'NOT_GENERATED');
 
   const bgColorMap = {
     success: 'bg-green-50 border-green-200',
@@ -51,65 +51,65 @@ export function AnomalyCard({ anomaly, onClick }: AnomalyCardProps) {
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-gray-900">{formatSymbol(anomaly.symbol)}</span>
           <span className={`px-2 py-1 rounded text-xs font-medium ${badgeColorMap[typeColor]}`}>
-            {getAnomalyTypeLabel(anomaly.type)}
+            {getAnomalyTypeLabel(anomaly.anomalyType)}
           </span>
         </div>
-        <span className="text-xs text-gray-500">{formatRelativeTime(anomaly.timestamp)}</span>
+        <span className="text-xs text-gray-500">{formatRelativeTime(anomaly.detectedAt)}</span>
       </div>
 
       {/* Metrics */}
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
           <div className="text-xs text-gray-600">Price</div>
-          <div className="text-sm font-semibold text-gray-900">{formatPrice(anomaly.price)}</div>
+          <div className="text-sm font-semibold text-gray-900">{formatPrice(anomaly.priceSnapshot.atDetection)}</div>
         </div>
         <div>
           <div className="text-xs text-gray-600">Return</div>
           <div
             className={`text-sm font-semibold ${
-              (anomaly.price_return || 0) > 0 ? 'text-green-600' : 'text-red-600'
+              (anomaly.metrics.priceChangePct || 0) > 0 ? 'text-green-600' : 'text-red-600'
             }`}
           >
-            {formatPercent(anomaly.price_return)}
+            {formatPercent(anomaly.metrics.priceChangePct)}
           </div>
         </div>
         <div>
           <div className="text-xs text-gray-600">Z-Score</div>
           <div className="text-sm font-semibold text-gray-900">
-            {anomaly.z_score?.toFixed(2) || 'N/A'}
+            {anomaly.metrics.zScore?.toFixed(2) || 'N/A'}
           </div>
         </div>
         <div>
           <div className="text-xs text-gray-600">Confidence</div>
           <div className="text-sm font-semibold text-gray-900">
-            {((anomaly.confidence || 0) * 100).toFixed(0)}%
+            {((anomaly.metrics.confidence || 0) * 100).toFixed(0)}%
           </div>
         </div>
       </div>
 
       {/* Narrative (if exists) */}
-      {anomaly.narrative?.narrative_text && (
+      {anomaly.narrative?.narrative && (
         <div className="mb-3 pt-3 border-t border-gray-200">
           <div className="text-xs text-gray-600 mb-1">Narrative</div>
-          <p className="text-sm text-gray-800 line-clamp-2">{anomaly.narrative.narrative_text}</p>
+          <p className="text-sm text-gray-800 line-clamp-2">{anomaly.narrative.narrative}</p>
         </div>
       )}
 
       {/* Footer: Validation and Metadata */}
       <div className="flex justify-between items-center pt-3 border-t border-gray-200">
         <div className="flex items-center gap-2">
-          {anomaly.validation_status && (
+          {anomaly.narrative?.validationStatus && (
             <span className={`px-2 py-1 rounded text-xs font-medium ${badgeColorMap[validationColor]}`}>
-              {anomaly.validation_status}
+              {anomaly.narrative.validationStatus}
             </span>
           )}
-          {anomaly.detection_metadata?.timeframe_minutes && (
+          {anomaly.detectionMetadata?.timeframe_minutes && (
             <span className="text-xs text-gray-600">
-              {anomaly.detection_metadata.timeframe_minutes}min window
+              {anomaly.detectionMetadata.timeframe_minutes}min window
             </span>
           )}
         </div>
-        <div className="text-xs text-gray-500">{formatDateShort(anomaly.timestamp)}</div>
+        <div className="text-xs text-gray-500">{formatDateShort(anomaly.detectedAt)}</div>
       </div>
     </div>
   );
