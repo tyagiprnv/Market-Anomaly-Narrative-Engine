@@ -40,11 +40,11 @@ function buildWhereClause(filters: AnomalyFilters): Prisma.anomaliesWhereInput {
     where.symbol = { in: filters.symbols };
   }
 
-  // Anomaly type filter
+  // Anomaly type filter (convert to lowercase for database)
   if (filters.anomalyType) {
-    where.anomaly_type = filters.anomalyType as any;
+    where.anomaly_type = filters.anomalyType.toLowerCase() as any;
   } else if (filters.types && filters.types.length > 0) {
-    where.anomaly_type = { in: filters.types as any[] };
+    where.anomaly_type = { in: filters.types.map(t => t.toLowerCase()) as any[] };
   }
 
   // Date range filter

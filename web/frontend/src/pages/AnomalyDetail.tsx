@@ -27,7 +27,7 @@ export function AnomalyDetail() {
   const startDate = new Date(anomalyTime.getTime() - 6 * 60 * 60 * 1000).toISOString(); // 6 hours before
   const endDate = new Date(anomalyTime.getTime() + 1 * 60 * 60 * 1000).toISOString(); // 1 hour after
 
-  // Fetch price history - must be called before any conditional returns (React Rules of Hooks)
+  // Fetch price history with polling - must be called before any conditional returns (React Rules of Hooks)
   const { data: priceData, isLoading: isPriceLoading } = usePriceHistory(
     {
       symbol: anomaly?.symbol || '',
@@ -35,7 +35,10 @@ export function AnomalyDetail() {
       endDate,
       granularity: '5m', // 5-minute granularity for detailed view
     },
-    { enabled: !!anomaly } // Only fetch when anomaly data is loaded
+    {
+      enabled: !!anomaly, // Only fetch when anomaly data is loaded
+      refetchInterval: 30_000, // Poll every 30 seconds for live updates
+    }
   );
 
   if (isLoading) {

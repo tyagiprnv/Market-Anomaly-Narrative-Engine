@@ -12,7 +12,7 @@ import { PriceHistoryRequest, PriceHistoryResponse } from '@mane/shared/types/ap
  */
 export function usePriceHistory(
   request: PriceHistoryRequest,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean; refetchInterval?: number }
 ): UseQueryResult<PriceHistoryResponse> {
   return useQuery({
     queryKey: queryKeys.prices.history(
@@ -35,6 +35,7 @@ export function usePriceHistory(
       return response.data;
     },
     enabled: options?.enabled ?? true,
-    staleTime: 60_000, // 1 minute (price data doesn't change frequently for historical)
+    refetchInterval: options?.refetchInterval, // Support polling for live updates
+    staleTime: options?.refetchInterval ? 0 : 60_000, // If polling, always fetch fresh data
   });
 }

@@ -29,13 +29,18 @@ export function ChartView() {
     };
   }, [selectedRange]);
 
-  // Fetch price data
-  const { data: priceData, isLoading: isPriceLoading } = usePriceHistory({
-    symbol: selectedSymbol,
-    startDate,
-    endDate,
-    granularity: selectedRange.granularity,
-  });
+  // Fetch price data with 30-second polling for live updates
+  const { data: priceData, isLoading: isPriceLoading } = usePriceHistory(
+    {
+      symbol: selectedSymbol,
+      startDate,
+      endDate,
+      granularity: selectedRange.granularity,
+    },
+    {
+      refetchInterval: 30_000, // Poll every 30 seconds for new price data
+    }
+  );
 
   // Fetch anomalies for the selected symbol and time range
   const { data: anomaliesData } = useAnomalies({

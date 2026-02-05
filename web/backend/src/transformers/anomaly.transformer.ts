@@ -20,15 +20,17 @@ type AnomalyWithRelations = anomalies & {
 
 /**
  * Map Prisma anomaly type enum to shared AnomalyType
+ * Database stores values in lowercase, convert to uppercase enum
  */
 function mapAnomalyType(type: string): AnomalyType {
+  const upperType = type.toUpperCase();
   const mapping: Record<string, AnomalyType> = {
     PRICE_SPIKE: AnomalyType.PRICE_SPIKE,
     PRICE_DROP: AnomalyType.PRICE_DROP,
     VOLUME_SPIKE: AnomalyType.VOLUME_SPIKE,
     COMBINED: AnomalyType.COMBINED,
   };
-  return mapping[type] || AnomalyType.COMBINED;
+  return mapping[upperType] || AnomalyType.COMBINED;
 }
 
 /**
