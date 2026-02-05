@@ -16,6 +16,7 @@ class AssetThresholds:
     z_score_threshold: float
     volume_z_threshold: float
     bollinger_std_multiplier: float
+    min_absolute_return_threshold: float  # Minimum % move to flag (prevents noise)
     volatility_tier: str
     source: str  # 'asset_specific', 'tier', or 'global'
 
@@ -81,6 +82,7 @@ class AssetProfileManager:
         global_z = settings.detection.z_score_threshold
         global_vol = settings.detection.volume_z_threshold
         global_bb = settings.detection.bollinger_std_multiplier
+        global_min_return = settings.detection.min_absolute_return_threshold
 
         # No config file, use global defaults
         if not self._config:
@@ -89,12 +91,16 @@ class AssetProfileManager:
                 z_score_threshold=global_z,
                 volume_z_threshold=global_vol,
                 bollinger_std_multiplier=global_bb,
+                min_absolute_return_threshold=global_min_return,
                 volatility_tier="unknown",
                 source="global",
             )
 
         # Priority 1: Asset-specific overrides
         asset_specific = self._config.get("asset_specific_thresholds", {})
+        yaml_global = self._config.get("global_defaults", {})
+        yaml_min_return = yaml_global.get("min_absolute_return_threshold", global_min_return)
+
         if symbol in asset_specific:
             overrides = asset_specific[symbol]
             return AssetThresholds(
@@ -102,6 +108,7 @@ class AssetProfileManager:
                 z_score_threshold=overrides.get("z_score_threshold", global_z),
                 volume_z_threshold=overrides.get("volume_z_threshold", global_vol),
                 bollinger_std_multiplier=overrides.get("bollinger_std_multiplier", global_bb),
+                min_absolute_return_threshold=overrides.get("min_absolute_return_threshold", yaml_min_return),
                 volatility_tier=self._get_tier_name(symbol),
                 source="asset_specific",
             )
@@ -115,12 +122,14 @@ class AssetProfileManager:
             base_z = yaml_global.get("z_score_threshold", global_z)
             base_vol = yaml_global.get("volume_z_threshold", global_vol)
             base_bb = yaml_global.get("bollinger_std_multiplier", global_bb)
+            base_min_return = tier_config.get("min_absolute_return", yaml_min_return)
 
             return AssetThresholds(
                 symbol=symbol,
                 z_score_threshold=base_z * multiplier,
                 volume_z_threshold=base_vol * multiplier,
                 bollinger_std_multiplier=base_bb,
+                min_absolute_return_threshold=base_min_return,
                 volatility_tier=tier_name,
                 source="tier",
             )
@@ -132,6 +141,7 @@ class AssetProfileManager:
             z_score_threshold=yaml_global.get("z_score_threshold", global_z),
             volume_z_threshold=yaml_global.get("volume_z_threshold", global_vol),
             bollinger_std_multiplier=yaml_global.get("bollinger_std_multiplier", global_bb),
+            min_absolute_return_threshold=yaml_global.get("min_absolute_return_threshold", global_min_return),
             volatility_tier="unknown",
             source="global",
         )

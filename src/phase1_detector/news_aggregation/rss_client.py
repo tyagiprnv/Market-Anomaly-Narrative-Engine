@@ -179,13 +179,29 @@ class RSSFeedClient(NewsClient):
         if summary and len(summary) > 500:
             summary = summary[:497] + "..."
 
-        # Filter by symbols if specified
+        # Match symbols if specified, but DON'T filter out non-matching articles
+        # Rationale: General crypto news (e.g., "Fed raises rates") affects all assets
+        # The Journalist agent will determine relevance during narrative generation
         matching_symbols = []
         if symbols:
             text = f"{title} {summary or ''}".upper()
-            matching_symbols = [s for s in symbols if s.upper() in text or s.split("-")[0] in text]
-            if not matching_symbols:
-                return None
+            # Broader matching: "BTC-USD" matches "BTC", "BITCOIN", etc.
+            symbol_keywords = []
+            for s in symbols:
+                base = s.split("-")[0]  # "BTC" from "BTC-USD"
+                symbol_keywords.extend([s.upper(), base])
+                # Add common names
+                if base == "BTC":
+                    symbol_keywords.extend(["BITCOIN"])
+                elif base == "ETH":
+                    symbol_keywords.extend(["ETHEREUM"])
+                elif base == "DOGE":
+                    symbol_keywords.extend(["DOGECOIN"])
+                elif base == "SOL":
+                    symbol_keywords.extend(["SOLANA"])
+
+            matching_symbols = [s for s in symbols if any(kw in text for kw in symbol_keywords)]
+            # Don't filter out articles - keep all crypto news
 
         # Extract sentiment from title and summary
         sentiment = extract_sentiment(title, summary)

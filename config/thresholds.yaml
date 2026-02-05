@@ -8,6 +8,7 @@ global_defaults:
   z_score_threshold: 3.0
   volume_z_threshold: 2.5
   bollinger_std_multiplier: 2.0
+  min_absolute_return_threshold: 1.0  # Don't flag moves under 1% regardless of Z-score
 
 # Volatility tiers with multipliers
 # Z-score threshold = global_default × multiplier
@@ -15,6 +16,7 @@ volatility_tiers:
   stable:
     description: "Major cryptocurrencies with lower volatility"
     multiplier: 1.2  # 3.0 × 1.2 = 3.6
+    min_absolute_return: 1.2  # Stable coins need bigger moves
     assets:
       - BTC-USD
       - ETH-USD
@@ -22,6 +24,7 @@ volatility_tiers:
   moderate:
     description: "Major altcoins with medium volatility"
     multiplier: 1.0  # 3.0 × 1.0 = 3.0 (baseline)
+    min_absolute_return: 1.0  # Default threshold
     assets:
       - BNB-USD
       - SOL-USD
@@ -44,6 +47,7 @@ volatility_tiers:
   volatile:
     description: "Meme coins and highly volatile assets"
     multiplier: 0.7  # 3.0 × 0.7 = 2.1
+    min_absolute_return: 0.8  # Lower threshold for volatile coins
     assets:
       - DOGE-USD
       - SHIB-USD
@@ -55,11 +59,13 @@ asset_specific_thresholds:
   BTC-USD:
     z_score_threshold: 3.5
     volume_z_threshold: 2.8
+    min_absolute_return_threshold: 1.5  # BTC needs bigger moves to be meaningful
     description: "Bitcoin: Most stable, requires higher threshold"
 
   DOGE-USD:
     z_score_threshold: 2.0
     volume_z_threshold: 2.0
+    min_absolute_return_threshold: 0.8  # Lower threshold for volatile meme coin
     description: "Dogecoin: Highly volatile meme coin"
 
 # Multi-timeframe configuration

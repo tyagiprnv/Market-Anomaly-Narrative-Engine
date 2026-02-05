@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLatestAnomalies, useAnomalyStats } from '../api/queries/anomalies';
+import { useLatestAnomalies } from '../api/queries/anomalies';
 import { AnomalyList } from '../components/dashboard/AnomalyList';
 import { SymbolSelector } from '../components/dashboard/SymbolSelector';
 import { LiveIndicator } from '../components/dashboard/LiveIndicator';
@@ -18,16 +18,6 @@ export function Dashboard() {
 
   // Fetch latest anomalies with 30-second polling
   const { data: latestAnomalies = [], isLoading, isFetching } = useLatestAnomalies(
-    {
-      symbols: selectedSymbols.length > 0 ? selectedSymbols : undefined,
-    },
-    {
-      refetchInterval: 30_000, // 30 seconds
-    }
-  );
-
-  // Fetch stats for summary with 30-second polling
-  const { data: stats } = useAnomalyStats(
     {
       symbols: selectedSymbols.length > 0 ? selectedSymbols : undefined,
     },
@@ -77,25 +67,12 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Filters and Stats */}
+        {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Symbol selector */}
-            <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Filter by Symbol
-              </label>
-              <SymbolSelector selected={selectedSymbols} onChange={setSelectedSymbols} />
-            </div>
-
-            {/* Stats */}
-            {stats && (
-              <div className="flex flex-col">
-                <span className="text-sm text-gray-600">Total Anomalies</span>
-                <span className="text-2xl font-bold text-gray-900">{stats.totalAnomalies}</span>
-              </div>
-            )}
-          </div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Filter by Symbol
+          </label>
+          <SymbolSelector selected={selectedSymbols} onChange={setSelectedSymbols} />
         </div>
 
         {/* Loading state */}

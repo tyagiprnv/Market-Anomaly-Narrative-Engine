@@ -65,6 +65,8 @@ class DetectionSettings(BaseSettings):
     z_score_threshold: float = 3.0
     volume_z_threshold: float = 2.5
     bollinger_std_multiplier: float = 2.0
+    min_std_threshold: float = 0.05  # Minimum volatility floor (prevents collapse)
+    min_absolute_return_threshold: float = 1.0  # Minimum return % to flag (prevents noise)
 
     # Time windows
     lookback_window_minutes: int = 60

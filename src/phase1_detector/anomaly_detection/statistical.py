@@ -14,15 +14,25 @@ from config.settings import settings
 class ZScoreDetector:
     """Detect anomalies using Z-score on price returns."""
 
-    def __init__(self, threshold: float = 3.0, window_minutes: int = 60):
+    def __init__(
+        self,
+        threshold: float = 3.0,
+        window_minutes: int = 60,
+        min_std: float = 0.05,
+        min_absolute_return: float = 1.0,
+    ):
         """Initialize Z-score detector.
 
         Args:
             threshold: Z-score threshold for anomaly detection (default: 3.0)
             window_minutes: Lookback window in minutes (default: 60)
+            min_std: Minimum std dev floor to prevent inflation during quiet periods (default: 0.05%)
+            min_absolute_return: Minimum return % to flag (prevents noise, default: 1.0%)
         """
         self.threshold = threshold
         self.window_minutes = window_minutes
+        self.min_std = min_std
+        self.min_absolute_return = min_absolute_return
 
     def detect(
         self, prices: pd.DataFrame, current_time: Optional[datetime] = None
@@ -52,22 +62,32 @@ class ZScoreDetector:
             (prices["timestamp"] >= window_start) & (prices["timestamp"] <= current_time)
         ]
 
-        if len(window_data) < 3:
+        # Require minimum 60 data points for stable statistics (approx 1 hour of minute data)
+        # This prevents false positives when system first starts up
+        if len(window_data) < 60:
             return []
 
         # Calculate Z-score for latest return
         returns = window_data["returns"].dropna()
-        if len(returns) < 2:
+        if len(returns) < 60:
             return []
 
         latest_return = returns.iloc[-1]
         mean_return = returns.iloc[:-1].mean()
         std_return = returns.iloc[:-1].std()
 
+        # Apply minimum std threshold to prevent inflation during quiet periods
+        # If actual std < min_std, use min_std (prevents tiny moves from getting huge Z-scores)
+        std_return = max(std_return, self.min_std)
+
         if std_return == 0:
             return []
 
         z_score = (latest_return - mean_return) / std_return
+
+        # Check minimum absolute return threshold (prevents flagging tiny moves)
+        if abs(latest_return) < self.min_absolute_return:
+            return []
 
         # Check if anomaly
         if abs(z_score) > self.threshold:
@@ -228,11 +248,12 @@ class VolumeSpikeDetector:
             (prices["timestamp"] >= window_start) & (prices["timestamp"] <= current_time)
         ]
 
-        if len(window_data) < 3:
+        # Require minimum 60 data points for stable statistics
+        if len(window_data) < 60:
             return []
 
         volumes = window_data["volume"].dropna()
-        if len(volumes) < 2:
+        if len(volumes) < 60:
             return []
 
         current_volume = volumes.iloc[-1]
@@ -275,6 +296,8 @@ class CombinedDetector:
         price_threshold: float = 2.0,
         volume_threshold: float = 2.0,
         window_minutes: int = 60,
+        min_std: float = 0.05,
+        min_absolute_return: float = 1.0,
     ):
         """Initialize combined detector.
 
@@ -282,8 +305,10 @@ class CombinedDetector:
             price_threshold: Z-score threshold for price (default: 2.0)
             volume_threshold: Z-score threshold for volume (default: 2.0)
             window_minutes: Lookback window in minutes (default: 60)
+            min_std: Minimum std dev floor (default: 0.05%)
+            min_absolute_return: Minimum return % to flag (default: 1.0%)
         """
-        self.price_detector = ZScoreDetector(price_threshold, window_minutes)
+        self.price_detector = ZScoreDetector(price_threshold, window_minutes, min_std, min_absolute_return)
         self.volume_detector = VolumeSpikeDetector(volume_threshold, window_minutes)
 
     def detect(
@@ -341,6 +366,7 @@ class MultiTimeframeDetector:
         threshold: float = 3.0,
         timeframe_windows: Optional[List[int]] = None,
         baseline_multiplier: int = 3,
+        min_absolute_return: float = 1.0,
     ):
         """Initialize multi-timeframe detector.
 
@@ -348,10 +374,12 @@ class MultiTimeframeDetector:
             threshold: Z-score threshold for anomaly detection
             timeframe_windows: List of timeframe windows in minutes (default: [5, 15, 30, 60])
             baseline_multiplier: Baseline window = timeframe × multiplier (default: 3)
+            min_absolute_return: Minimum return % to flag (prevents noise)
         """
         self.threshold = threshold
         self.timeframe_windows = timeframe_windows or [5, 15, 30, 60]
         self.baseline_multiplier = baseline_multiplier
+        self.min_absolute_return = min_absolute_return
 
     def detect(
         self, prices: pd.DataFrame, current_time: Optional[datetime] = None
@@ -450,6 +478,10 @@ class MultiTimeframeDetector:
 
         z_score = (cumulative_return - baseline_mean) / baseline_std
 
+        # Check minimum absolute return threshold (prevents flagging tiny moves)
+        if abs(cumulative_return) < self.min_absolute_return:
+            return None
+
         # Check if anomaly
         if abs(z_score) > self.threshold:
             symbol = prices.iloc[0].get("symbol", "UNKNOWN")
@@ -520,12 +552,15 @@ class AnomalyDetector:
                     threshold=settings.detection.z_score_threshold,
                     timeframe_windows=tf_config["windows"],
                     baseline_multiplier=tf_config["baseline_multiplier"],
+                    min_absolute_return=settings.detection.min_absolute_return_threshold,
                 )
 
         # Legacy detectors (backward compatibility)
         self.z_score_detector = ZScoreDetector(
             threshold=settings.detection.z_score_threshold,
             window_minutes=settings.detection.lookback_window_minutes,
+            min_std=settings.detection.min_std_threshold,
+            min_absolute_return=settings.detection.min_absolute_return_threshold,
         )
         self.bollinger_detector = BollingerBandDetector(
             window=20, std_multiplier=settings.detection.bollinger_std_multiplier
@@ -538,6 +573,8 @@ class AnomalyDetector:
             price_threshold=2.0,
             volume_threshold=2.0,
             window_minutes=settings.detection.lookback_window_minutes,
+            min_std=settings.detection.min_std_threshold,
+            min_absolute_return=settings.detection.min_absolute_return_threshold,
         )
 
     def detect_all(
@@ -569,8 +606,9 @@ class AnomalyDetector:
 
         # Priority 1: Multi-timeframe detector (if enabled)
         if self.multi_timeframe_detector and asset_thresholds:
-            # Update threshold dynamically
+            # Update thresholds dynamically
             self.multi_timeframe_detector.threshold = asset_thresholds.z_score_threshold
+            self.multi_timeframe_detector.min_absolute_return = asset_thresholds.min_absolute_return_threshold
             multi_tf = self.multi_timeframe_detector.detect(prices, current_time)
             if multi_tf:
                 # Enrich with asset metadata
@@ -579,6 +617,7 @@ class AnomalyDetector:
                     {
                         "volatility_tier": asset_thresholds.volatility_tier,
                         "asset_threshold": asset_thresholds.z_score_threshold,
+                        "min_return_threshold": asset_thresholds.min_absolute_return_threshold,
                         "threshold_source": asset_thresholds.source,
                     }
                 )
@@ -588,6 +627,7 @@ class AnomalyDetector:
         if asset_thresholds:
             # Update thresholds dynamically
             self.combined_detector.price_detector.threshold = asset_thresholds.z_score_threshold
+            self.combined_detector.price_detector.min_absolute_return = asset_thresholds.min_absolute_return_threshold
             self.combined_detector.volume_detector.threshold = asset_thresholds.volume_z_threshold
 
         combined = self.combined_detector.detect(prices, current_time)
