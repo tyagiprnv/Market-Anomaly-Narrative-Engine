@@ -90,7 +90,9 @@ export async function getLatestAnomalies(
 
     const anomalies = await anomalyService.findLatest(since, symbols);
 
-    logger.info(`Retrieved ${anomalies.length} anomalies since ${since.toISOString()}`);
+    logger.info(
+      `Retrieved ${anomalies.length} anomalies since ${since ? since.toISOString() : '24h ago'}`
+    );
     res.json(anomalies);
   } catch (error) {
     logger.error('Error fetching latest anomalies:', error);

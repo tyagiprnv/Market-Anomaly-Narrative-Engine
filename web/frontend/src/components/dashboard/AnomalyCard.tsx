@@ -21,15 +21,24 @@ interface AnomalyCardProps {
 }
 
 export function AnomalyCard({ anomaly, onClick }: AnomalyCardProps) {
+  console.log('AnomalyCard rendered:', { id: anomaly.id, hasOnClick: !!onClick });
+
   const typeColor = getColor(getAnomalyTypeColor(anomaly.anomalyType));
   const validationColor = getColor(getValidationStatusColor(anomaly.narrative?.validationStatus || 'NOT_GENERATED'));
 
   return (
     <div
       className={`border rounded-lg p-4 ${bgColorMap[typeColor]} ${
-        onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
+        onClick ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all' : ''
       }`}
-      onClick={onClick}
+      onClick={(e) => {
+        console.log('Card clicked!', anomaly.id);
+        if (onClick) {
+          onClick();
+        }
+      }}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
     >
       {/* Header: Symbol and Type */}
       <div className="flex justify-between items-start mb-3">

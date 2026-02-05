@@ -18,6 +18,22 @@ export function AnomalyDetail() {
   const navigate = useNavigate();
   const { data: anomaly, isLoading, error } = useAnomaly(id || '', { enabled: !!id });
 
+  // Calculate date ranges for price history (needs to be before conditional returns for hooks)
+  const anomalyTime = anomaly ? new Date(anomaly.detectedAt) : new Date();
+  const startDate = new Date(anomalyTime.getTime() - 6 * 60 * 60 * 1000).toISOString(); // 6 hours before
+  const endDate = new Date(anomalyTime.getTime() + 1 * 60 * 60 * 1000).toISOString(); // 1 hour after
+
+  // Fetch price history - must be called before any conditional returns (React Rules of Hooks)
+  const { data: priceData, isLoading: isPriceLoading } = usePriceHistory(
+    {
+      symbol: anomaly?.symbol || '',
+      startDate,
+      endDate,
+      granularity: '5m', // 5-minute granularity for detailed view
+    },
+    { enabled: !!anomaly } // Only fetch when anomaly data is loaded
+  );
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -57,18 +73,6 @@ export function AnomalyDetail() {
   const unclusteredArticles = (anomaly.newsArticles || []).filter(
     (article) => !article.clusterId
   );
-
-  // Fetch price history around the anomaly (6 hours before to 1 hour after)
-  const anomalyTime = new Date(anomaly.detectedAt);
-  const startDate = new Date(anomalyTime.getTime() - 6 * 60 * 60 * 1000).toISOString(); // 6 hours before
-  const endDate = new Date(anomalyTime.getTime() + 1 * 60 * 60 * 1000).toISOString(); // 1 hour after
-
-  const { data: priceData, isLoading: isPriceLoading } = usePriceHistory({
-    symbol: anomaly.symbol,
-    startDate,
-    endDate,
-    granularity: '5m', // 5-minute granularity for detailed view
-  });
 
   return (
     <AppLayout>

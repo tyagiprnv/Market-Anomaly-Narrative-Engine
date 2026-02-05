@@ -142,13 +142,17 @@ export async function findById(id: string): Promise<AnomalyDTO | null> {
 /**
  * Find latest anomalies for polling (efficient query)
  * Returns anomalies detected after the given timestamp
+ * If no timestamp provided, defaults to last 24 hours
  */
 export async function findLatest(
-  since: Date,
+  since?: Date,
   symbols?: string[]
 ): Promise<AnomalyDTO[]> {
+  // Default to 24 hours ago if no timestamp provided
+  const sinceDate = since || new Date(Date.now() - 24 * 60 * 60 * 1000);
+
   const where: Prisma.anomaliesWhereInput = {
-    detected_at: { gt: since },
+    detected_at: { gt: sinceDate },
   };
 
   if (symbols && symbols.length > 0) {

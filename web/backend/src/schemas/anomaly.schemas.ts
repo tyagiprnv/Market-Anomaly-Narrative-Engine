@@ -45,7 +45,10 @@ export type GetAnomalyByIdParams = z.infer<typeof getAnomalyByIdParamsSchema>;
  * Query parameters for GET /api/anomalies/latest
  */
 export const getLatestAnomaliesQuerySchema = z.object({
-  since: z.coerce.date(),
+  since: z.preprocess(
+    (val) => (val === '' || val === undefined ? undefined : val),
+    z.coerce.date().optional()
+  ),
   symbols: z
     .string()
     .optional()

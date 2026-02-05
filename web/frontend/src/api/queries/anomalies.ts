@@ -39,9 +39,9 @@ export function useAnomalies(
       if (filters.page) params.append('page', filters.page.toString());
       if (filters.limit) params.append('limit', filters.limit.toString());
 
-      const response = await apiClient.get<PaginatedResponse<AnomalyDTO>>(
-        `/anomalies?${params.toString()}`
-      );
+      const queryString = params.toString();
+      const url = queryString ? `/anomalies?${queryString}` : '/anomalies';
+      const response = await apiClient.get<PaginatedResponse<AnomalyDTO>>(url);
       return response.data;
     },
     enabled: options?.enabled ?? true,
@@ -66,7 +66,9 @@ export function useLatestAnomalies(
         request.symbols.forEach((s) => params.append('symbol', s));
       }
 
-      const response = await apiClient.get<AnomalyDTO[]>(`/anomalies/latest?${params.toString()}`);
+      const queryString = params.toString();
+      const url = queryString ? `/anomalies/latest?${queryString}` : '/anomalies/latest';
+      const response = await apiClient.get<AnomalyDTO[]>(url);
       return response.data;
     },
     enabled: options?.enabled ?? true,
@@ -117,9 +119,9 @@ export function useAnomalyStats(
       if (filters?.startDate) params.append('startDate', filters.startDate);
       if (filters?.endDate) params.append('endDate', filters.endDate);
 
-      const response = await apiClient.get<AnomalyStatsResponse>(
-        `/anomalies/stats?${params.toString()}`
-      );
+      const queryString = params.toString();
+      const url = queryString ? `/anomalies/stats?${queryString}` : '/anomalies/stats';
+      const response = await apiClient.get<AnomalyStatsResponse>(url);
       return response.data;
     },
     enabled: options?.enabled ?? true,

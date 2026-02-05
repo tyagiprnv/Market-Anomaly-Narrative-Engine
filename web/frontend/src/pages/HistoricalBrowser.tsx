@@ -1,15 +1,22 @@
 /**
  * Historical anomaly browser page with filtering and pagination
  */
+import { useNavigate } from 'react-router-dom';
 import { useAnomalies } from '../api/queries/anomalies';
 import { useFilterState } from '../utils/urlState';
 import { AnomalyFilters } from '../components/browser';
 import { AnomalyList } from '../components/dashboard';
 import { Pagination } from '../components/common';
 import { AppLayout } from '../components/layout/AppLayout';
+import { AnomalyDTO } from '@mane/shared/types/api';
 
 export function HistoricalBrowser() {
+  const navigate = useNavigate();
   const { filters, setFilters, updateFilter, clearFilters } = useFilterState(20);
+
+  const handleAnomalyClick = (anomaly: AnomalyDTO) => {
+    navigate(`/anomalies/${anomaly.id}`);
+  };
   const { data, isLoading, isError, error } = useAnomalies(filters);
 
   return (
@@ -89,7 +96,7 @@ export function HistoricalBrowser() {
                     </button>
                   </div>
                 ) : (
-                  <AnomalyList anomalies={data.data} />
+                  <AnomalyList anomalies={data.data} onAnomalyClick={handleAnomalyClick} />
                 )}
 
                 {/* Pagination */}

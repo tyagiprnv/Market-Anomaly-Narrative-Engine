@@ -11,10 +11,17 @@ import { ChartView } from './pages/ChartView';
 import { HistoricalBrowser } from './pages/HistoricalBrowser';
 
 function Login() {
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -105,10 +112,17 @@ function Login() {
 }
 
 function Register() {
-  const { register } = useAuth();
+  const { register, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -198,8 +212,16 @@ function Register() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const [hasChecked, setHasChecked] = React.useState(false);
 
-  if (isLoading) {
+  React.useEffect(() => {
+    if (!isLoading) {
+      setHasChecked(true);
+    }
+  }, [isLoading]);
+
+  // Show loading only on initial check
+  if (!hasChecked && isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

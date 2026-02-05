@@ -30,9 +30,17 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Only redirect to login on 401 if not already on auth pages
+    // and not from the /auth/me endpoint (which is used to check auth state)
     if (error.response?.status === 401) {
-      // Redirect to login on unauthorized
-      window.location.href = '/login';
+      const currentPath = window.location.pathname;
+      const isAuthPage = currentPath === '/login' || currentPath === '/register';
+      const isAuthMeEndpoint = error.config?.url?.includes('/auth/me');
+
+      // Don't redirect if already on auth page or if it's the /auth/me check
+      if (!isAuthPage && !isAuthMeEndpoint) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

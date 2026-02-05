@@ -32,6 +32,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     queryFn: fetchMe,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false, // Prevent refetch on tab focus
+    refetchOnMount: false, // Prevent refetch on component mount
+    refetchOnReconnect: false, // Prevent refetch on network reconnect
   });
 
   const loginMutation = useMutation({

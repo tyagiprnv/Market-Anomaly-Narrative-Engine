@@ -6,13 +6,17 @@ import rateLimit from 'express-rate-limit';
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 requests per window (increased for development)
+  max: 100, // 100 requests per window (relaxed for development)
   message: {
     error: 'TooManyRequests',
     message: 'Too many authentication attempts. Please try again later.',
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for /me endpoint to avoid blocking auth checks
+    return req.path === '/api/auth/me';
+  },
 });
 
 export const apiLimiter = rateLimit({

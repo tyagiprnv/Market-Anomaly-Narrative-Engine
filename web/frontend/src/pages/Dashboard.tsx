@@ -41,6 +41,8 @@ export function Dashboard() {
   }, [latestAnomalies, isFetching]);
 
   const handleAnomalyClick = (anomaly: AnomalyDTO) => {
+    console.log('Anomaly clicked:', anomaly.id);
+    console.log('Navigating to:', `/anomalies/${anomaly.id}`);
     navigate(`/anomalies/${anomaly.id}`);
   };
 

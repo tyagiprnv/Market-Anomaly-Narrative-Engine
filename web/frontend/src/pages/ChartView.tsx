@@ -99,7 +99,7 @@ export function ChartView() {
           />
 
           {/* Chart info */}
-          {priceData && (
+          {priceData?.data && (
             <div className="mt-4 text-sm text-gray-500">
               <p>
                 Showing {priceData.data.length} data points at {priceData.granularity} granularity
