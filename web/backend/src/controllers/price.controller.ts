@@ -20,7 +20,7 @@ export async function getPriceHistory(
     const { symbol } = req.params as GetPriceHistoryParams;
     const { startDate, endDate, aggregation } = req.query as unknown as GetPriceHistoryQuery;
 
-    const prices = await priceService.getPriceHistory({
+    const result = await priceService.getPriceHistory({
       symbol,
       startDate,
       endDate,
@@ -28,10 +28,19 @@ export async function getPriceHistory(
     });
 
     logger.info(
-      `Retrieved ${prices.length} price points for ${symbol} (${aggregation} aggregation)`
+      `Retrieved ${result.data.length} price points for ${symbol} (${result.granularity} aggregation)`
     );
 
-    res.json(prices);
+    // Return in PriceHistoryResponse format
+    res.json({
+      symbol,
+      granularity: result.granularity,
+      data: result.data.map((p) => ({
+        timestamp: new Date(p.timestamp).getTime(), // Convert to Unix timestamp
+        price: p.price,
+        volume: p.volume,
+      })),
+    });
   } catch (error) {
     logger.error(`Error fetching price history for ${req.params.symbol}:`, error);
     next(error);

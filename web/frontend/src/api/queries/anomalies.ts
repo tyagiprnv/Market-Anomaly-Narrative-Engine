@@ -26,13 +26,16 @@ export function useAnomalies(
       const params = new URLSearchParams();
 
       if (filters.symbols?.length) {
-        filters.symbols.forEach((s) => params.append('symbol', s));
+        // Send symbols as comma-separated string
+        params.append('symbols', filters.symbols.join(','));
       }
       if (filters.types?.length) {
-        filters.types.forEach((t) => params.append('type', t));
+        // Send types as comma-separated string
+        params.append('types', filters.types.join(','));
       }
       if (filters.validationStatus?.length) {
-        filters.validationStatus.forEach((v) => params.append('validationStatus', v));
+        // Send validation statuses as comma-separated string
+        params.append('validationStatuses', filters.validationStatus.join(','));
       }
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
@@ -63,7 +66,8 @@ export function useLatestAnomalies(
 
       if (request.since) params.append('since', request.since);
       if (request.symbols?.length) {
-        request.symbols.forEach((s) => params.append('symbol', s));
+        // Send symbols as comma-separated string
+        params.append('symbols', request.symbols.join(','));
       }
 
       const queryString = params.toString();
@@ -100,7 +104,7 @@ export function useAnomaly(
  */
 export function useAnomalyStats(
   filters?: Omit<AnomalyFilters, 'page' | 'limit'>,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean; refetchInterval?: number }
 ): UseQueryResult<AnomalyStatsResponse> {
   return useQuery({
     queryKey: queryKeys.anomalies.stats(filters),
@@ -108,7 +112,8 @@ export function useAnomalyStats(
       const params = new URLSearchParams();
 
       if (filters?.symbols?.length) {
-        filters.symbols.forEach((s) => params.append('symbol', s));
+        // Send symbols as comma-separated string
+        params.append('symbols', filters.symbols.join(','));
       }
       if (filters?.types?.length) {
         filters.types.forEach((t) => params.append('type', t));
@@ -125,6 +130,7 @@ export function useAnomalyStats(
       return response.data;
     },
     enabled: options?.enabled ?? true,
-    staleTime: 60_000, // 1 minute
+    refetchInterval: options?.refetchInterval, // Support polling
+    staleTime: options?.refetchInterval ? 0 : 60_000, // If polling, always fetch fresh data
   });
 }

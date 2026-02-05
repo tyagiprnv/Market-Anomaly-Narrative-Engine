@@ -22,14 +22,16 @@ export async function getAnomalies(
   next: NextFunction
 ) {
   try {
-    const { page, limit, symbol, symbols, anomalyType, validationStatus, startDate, endDate } =
+    const { page, limit, symbol, symbols, anomalyType, types, validationStatus, validationStatuses, startDate, endDate } =
       req.query as unknown as GetAnomaliesQuery;
 
     const filters = {
       symbol,
       symbols,
       anomalyType,
+      types,
       validationStatus,
+      validationStatuses,
       startDate,
       endDate,
     };

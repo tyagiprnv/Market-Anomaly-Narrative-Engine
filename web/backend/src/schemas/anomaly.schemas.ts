@@ -25,7 +25,15 @@ export const getAnomaliesQuerySchema = z.object({
     .optional()
     .transform((val) => (val ? val.split(',').map((s) => s.trim()) : undefined)),
   anomalyType: z.nativeEnum(AnomalyType).optional(),
+  types: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(',').map((t) => t.trim() as AnomalyType) : undefined)),
   validationStatus: z.nativeEnum(ValidationStatus).optional(),
+  validationStatuses: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(',').map((s) => s.trim() as ValidationStatus) : undefined)),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
 });

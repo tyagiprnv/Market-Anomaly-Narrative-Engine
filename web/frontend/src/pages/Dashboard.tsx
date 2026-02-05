@@ -26,10 +26,13 @@ export function Dashboard() {
     }
   );
 
-  // Fetch stats for summary
+  // Fetch stats for summary with 30-second polling
   const { data: stats } = useAnomalyStats(
     {
       symbols: selectedSymbols.length > 0 ? selectedSymbols : undefined,
+    },
+    {
+      refetchInterval: 30_000, // 30 seconds
     }
   );
 
@@ -76,7 +79,7 @@ export function Dashboard() {
 
         {/* Filters and Stats */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Symbol selector */}
             <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -87,18 +90,10 @@ export function Dashboard() {
 
             {/* Stats */}
             {stats && (
-              <>
-                <div className="flex flex-col">
-                  <span className="text-sm text-gray-600">Total Anomalies</span>
-                  <span className="text-2xl font-bold text-gray-900">{stats.totalAnomalies}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm text-gray-600">Avg Confidence</span>
-                  <span className="text-2xl font-bold text-gray-900">
-                    {(stats.averageConfidence * 100).toFixed(0)}%
-                  </span>
-                </div>
-              </>
+              <div className="flex flex-col">
+                <span className="text-sm text-gray-600">Total Anomalies</span>
+                <span className="text-2xl font-bold text-gray-900">{stats.totalAnomalies}</span>
+              </div>
             )}
           </div>
         </div>

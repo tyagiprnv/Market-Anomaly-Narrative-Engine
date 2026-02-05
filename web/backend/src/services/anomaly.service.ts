@@ -12,7 +12,9 @@ export interface AnomalyFilters {
   symbol?: string;
   symbols?: string[];
   anomalyType?: string;
+  types?: string[];
   validationStatus?: ValidationStatus;
+  validationStatuses?: ValidationStatus[];
   startDate?: Date;
   endDate?: Date;
 }
@@ -41,6 +43,8 @@ function buildWhereClause(filters: AnomalyFilters): Prisma.anomaliesWhereInput {
   // Anomaly type filter
   if (filters.anomalyType) {
     where.anomaly_type = filters.anomalyType as any;
+  } else if (filters.types && filters.types.length > 0) {
+    where.anomaly_type = { in: filters.types as any[] };
   }
 
   // Date range filter
@@ -77,6 +81,28 @@ function buildWhereClause(filters: AnomalyFilters): Prisma.anomaliesWhereInput {
           validation_passed: false,
         };
         break;
+    }
+  } else if (filters.validationStatuses && filters.validationStatuses.length > 0) {
+    // Handle multiple validation statuses with OR logic
+    const conditions: any[] = [];
+    filters.validationStatuses.forEach((status) => {
+      switch (status) {
+        case ValidationStatus.NOT_GENERATED:
+          conditions.push({ narratives: null });
+          break;
+        case ValidationStatus.PENDING:
+          conditions.push({ narratives: { validated: false } });
+          break;
+        case ValidationStatus.VALID:
+          conditions.push({ narratives: { validated: true, validation_passed: true } });
+          break;
+        case ValidationStatus.INVALID:
+          conditions.push({ narratives: { validated: true, validation_passed: false } });
+          break;
+      }
+    });
+    if (conditions.length > 0) {
+      where.OR = conditions;
     }
   }
 

@@ -64,7 +64,10 @@ function getTimeBucketTruncation(aggregation: string): string {
 /**
  * Get price history for a symbol with auto-aggregation
  */
-export async function getPriceHistory(options: PriceQueryOptions): Promise<PriceDataDTO[]> {
+export async function getPriceHistory(options: PriceQueryOptions): Promise<{
+  data: PriceDataDTO[];
+  granularity: string;
+}> {
   const { symbol, startDate, endDate, aggregation: requestedAggregation } = options;
 
   // Default to last 24 hours if no dates provided
@@ -89,7 +92,10 @@ export async function getPriceHistory(options: PriceQueryOptions): Promise<Price
       orderBy: { timestamp: 'asc' },
     });
 
-    return prices.map(toPriceDataDTO);
+    return {
+      data: prices.map(toPriceDataDTO),
+      granularity: '1m',
+    };
   }
 
   // Use raw SQL for aggregation
@@ -112,12 +118,15 @@ export async function getPriceHistory(options: PriceQueryOptions): Promise<Price
   const results = await prisma.$queryRaw<AggregatedPrice[]>(query);
 
   // Transform to DTO
-  return results.map((row) => ({
-    timestamp: row.timestamp.toISOString(),
-    symbol: row.symbol,
-    price: row.price,
-    volume: row.volume_24h,
-  }));
+  return {
+    data: results.map((row) => ({
+      timestamp: row.timestamp.toISOString(),
+      symbol: row.symbol,
+      price: row.price,
+      volume: row.volume_24h,
+    })),
+    granularity: aggregation,
+  };
 }
 
 /**

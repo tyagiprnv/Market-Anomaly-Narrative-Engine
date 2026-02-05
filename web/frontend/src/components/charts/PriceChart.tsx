@@ -91,11 +91,13 @@ export function PriceChart({
 
       lineSeriesRef.current = lineSeries;
 
-      // Convert data to chart format
-      const chartData: LineData[] = data.map((d) => ({
-        time: (d.timestamp / 1000) as UTCTimestamp, // Convert ms to seconds
-        value: d.price,
-      }));
+      // Convert data to chart format and ensure ascending order
+      const chartData: LineData[] = data
+        .map((d) => ({
+          time: (d.timestamp / 1000) as UTCTimestamp, // Convert ms to seconds
+          value: d.price,
+        }))
+        .sort((a, b) => (a.time as number) - (b.time as number)); // Sort ascending by time
 
       lineSeries.setData(chartData);
 
@@ -119,7 +121,8 @@ export function PriceChart({
               text: `${a.anomalyType}${a.detectionMetadata?.timeframe_minutes ? ` (${a.detectionMetadata.timeframe_minutes}m)` : ''}`,
               size: 1,
             };
-          });
+          })
+          .sort((a, b) => (a.time as number) - (b.time as number)); // Sort markers by time
 
         lineSeries.setMarkers(markers);
       }
