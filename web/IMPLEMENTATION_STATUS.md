@@ -4,8 +4,8 @@
 
 This document tracks the implementation progress of the Market Anomaly Narrative Engine web application.
 
-**Current Phase:** Phase 9 - Historical Browser ✅ (Completed)
-**Next Phase:** Phase 10 - Polish & UX
+**Current Phase:** Phase 10 - Polish & UX ✅ (Completed)
+**Next Phase:** Phase 11 - Testing
 
 ---
 
@@ -165,23 +165,63 @@ This document tracks the implementation progress of the Market Anomaly Narrative
 - [x] Updated AppLayout to dark theme for consistency
 - [x] Loading and error states
 
+### Phase 10: Polish & UX
+- [x] Error boundaries
+  - [x] ErrorBoundary component (class-based, catches React errors)
+  - [x] Fallback UI with error details (dev mode only)
+  - [x] Try Again and Go Home actions
+  - [x] Wrapped App with ErrorBoundary
+- [x] Loading states (skeleton loaders)
+  - [x] Base Skeleton component with variants (text, rectangular, circular)
+  - [x] AnomalyCardSkeleton
+  - [x] NewsArticleCardSkeleton
+  - [x] AnomalyDetailSkeleton
+  - [x] ChartSkeleton
+  - [x] ListSkeleton (reusable with any item skeleton)
+  - [x] Replaced spinners with skeletons in Dashboard, HistoricalBrowser, AnomalyDetail
+- [x] Toast notifications
+  - [x] ToastProvider with react-hot-toast
+  - [x] Utility functions (showSuccess, showError, showInfo, showWarning, showLoading)
+  - [x] Dark theme styling matching app design
+  - [x] Added toasts to login/register success/error
+  - [x] Added toasts to filter save/load/clear actions
+- [x] Empty states
+  - [x] EmptyState component (icon, title, description, action button)
+  - [x] EmptyStateIcons library (NoData, NoResults, NoAnomalies, NoNews, Error, Monitoring)
+  - [x] Preset variants (NoAnomaliesFound, NoAnomaliesYet, NoNewsArticles, ErrorState)
+  - [x] Updated AnomalyList to use EmptyState
+  - [x] Updated Dashboard with NoAnomaliesYet/NoAnomaliesFound
+  - [x] Updated HistoricalBrowser with NoAnomaliesFound
+  - [x] Updated AnomalyDetail with ErrorState
+- [x] Responsive design
+  - [x] Mobile-friendly AppLayout with hamburger menu
+  - [x] Title truncation (full on desktop, "MANE" on mobile)
+  - [x] Collapsible mobile navigation menu
+  - [x] Responsive button layouts in Dashboard header
+  - [x] Flexible grid layouts (1/2/3 columns based on breakpoints)
+  - [x] Responsive chart heights (300px on mobile, 400px on desktop)
+  - [x] Improved padding/spacing for mobile (py-4 sm:py-8)
+  - [x] Filter sidebar stacks on mobile, side-by-side on desktop
+- [x] Accessibility improvements
+  - [x] SkipLink component for keyboard navigation
+  - [x] Added role="banner", role="main", role="navigation"
+  - [x] ARIA labels for navigation (aria-label="Main navigation")
+  - [x] Added id="main-content" to main element
+  - [x] Keyboard support for AnomalyCard (Enter/Space keys)
+  - [x] Focus ring on interactive elements
+  - [x] Screen reader friendly card labels
+  - [x] useDocumentTitle hook for page titles
+  - [x] Document titles on all pages (Dashboard, History, Anomaly Detail)
+
 ---
 
 ## 🚧 In Progress
 
-(Ready to start Phase 10)
+(Ready to start Phase 11)
 
 ---
 
 ## 📋 Upcoming Phases
-
-### Phase 10: Polish & UX (Estimated: 2 days)
-- [ ] Error boundaries
-- [ ] Loading states (skeleton loaders)
-- [ ] Empty states
-- [ ] Toast notifications
-- [ ] Responsive design
-- [ ] Accessibility improvements
 
 ### Phase 11: Testing (Estimated: 3 days)
 - [ ] Backend unit tests (services, transformers)
@@ -260,6 +300,8 @@ src/
 │       └── index.ts ✅
 ├── context/
 │   └── AuthContext.tsx ✅
+├── hooks/
+│   └── useDocumentTitle.ts ✅
 ├── utils/
 │   ├── queryKeys.ts ✅
 │   ├── formatters.ts ✅
@@ -288,6 +330,11 @@ src/
 │   │   └── index.ts ✅
 │   ├── common/
 │   │   ├── Pagination.tsx ✅
+│   │   ├── ErrorBoundary.tsx ✅
+│   │   ├── Skeleton.tsx ✅
+│   │   ├── Toast.tsx ✅
+│   │   ├── EmptyState.tsx ✅
+│   │   ├── SkipLink.tsx ✅
 │   │   └── index.ts ✅
 │   └── layout/
 │       └── AppLayout.tsx ✅
@@ -368,8 +415,8 @@ index.ts ✅
 
 ## Estimated Timeline
 
-- **Completed:** ~15 days (Phase 0-8)
-- **Remaining:** ~8-13 days (Phase 9-12)
+- **Completed:** ~17 days (Phase 0-10)
+- **Remaining:** ~5-7 days (Phase 11-12)
 - **Total:** ~4-5 weeks for full-featured MVP
 
 ---

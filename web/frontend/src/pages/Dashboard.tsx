@@ -8,10 +8,13 @@ import { useLatestAnomalies } from '../api/queries/anomalies';
 import { AnomalyList } from '../components/dashboard/AnomalyList';
 import { SymbolSelector } from '../components/dashboard/SymbolSelector';
 import { LiveIndicator } from '../components/dashboard/LiveIndicator';
+import { ListSkeleton, AnomalyCardSkeleton, NoAnomaliesYet, NoAnomaliesFound } from '../components/common';
 import { AppLayout } from '../components/layout/AppLayout';
 import { AnomalyDTO } from '@mane/shared/types/api';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export function Dashboard() {
+  useDocumentTitle('Dashboard');
   const navigate = useNavigate();
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -43,26 +46,28 @@ export function Dashboard() {
     <AppLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-100">Live Anomaly Feed</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-100">Live Anomaly Feed</h2>
             <p className="mt-1 text-sm text-gray-400">
               Real-time detection of crypto market anomalies
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/history')}
-              className="px-4 py-2 bg-gray-700 text-gray-200 rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
-            >
-              Browse History
-            </button>
-            <button
-              onClick={() => navigate('/charts')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-            >
-              View Charts
-            </button>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => navigate('/history')}
+                className="px-3 sm:px-4 py-2 bg-gray-700 text-gray-200 rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium whitespace-nowrap"
+              >
+                Browse History
+              </button>
+              <button
+                onClick={() => navigate('/charts')}
+                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap"
+              >
+                View Charts
+              </button>
+            </div>
             <LiveIndicator lastUpdate={lastUpdate} isPolling={!isFetching} />
           </div>
         </div>
@@ -77,9 +82,8 @@ export function Dashboard() {
 
         {/* Loading state */}
         {isLoading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
-            <p className="text-gray-600">Loading anomalies...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <ListSkeleton count={6} ItemSkeleton={AnomalyCardSkeleton} />
           </div>
         )}
 
@@ -88,10 +92,12 @@ export function Dashboard() {
           <AnomalyList
             anomalies={latestAnomalies}
             onAnomalyClick={handleAnomalyClick}
-            emptyMessage={
-              selectedSymbols.length > 0
-                ? 'No anomalies found for selected symbols'
-                : 'No anomalies detected yet. The system is monitoring markets...'
+            emptyState={
+              selectedSymbols.length > 0 ? (
+                <NoAnomaliesFound />
+              ) : (
+                <NoAnomaliesYet />
+              )
             }
           />
         )}

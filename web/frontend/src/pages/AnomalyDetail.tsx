@@ -12,11 +12,15 @@ import {
   NewsClusterView,
 } from '../components/detail';
 import { PriceChart } from '../components/charts';
+import { AnomalyDetailSkeleton, ChartSkeleton, ErrorState } from '../components/common';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export function AnomalyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: anomaly, isLoading, error } = useAnomaly(id || '', { enabled: !!id });
+
+  useDocumentTitle(anomaly ? `${anomaly.symbol} Anomaly` : 'Anomaly Details');
 
   // Calculate date ranges for price history (needs to be before conditional returns for hooks)
   const anomalyTime = anomaly ? new Date(anomaly.detectedAt) : new Date();
@@ -37,8 +41,9 @@ export function AnomalyDetail() {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-gray-600">Loading anomaly details...</div>
+        <div className="max-w-6xl mx-auto space-y-6">
+          <AnomalyDetailSkeleton />
+          <ChartSkeleton />
         </div>
       </AppLayout>
     );
@@ -47,16 +52,11 @@ export function AnomalyDetail() {
   if (error || !anomaly) {
     return (
       <AppLayout>
-        <div className="flex flex-col items-center justify-center h-64">
-          <div className="text-red-600 mb-4">
-            {error ? 'Failed to load anomaly' : 'Anomaly not found'}
-          </div>
-          <button
-            onClick={() => navigate('/')}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            Back to Dashboard
-          </button>
+        <div className="max-w-6xl mx-auto">
+          <ErrorState
+            message={error ? 'Failed to load anomaly details' : 'Anomaly not found'}
+            onRetry={() => navigate('/')}
+          />
         </div>
       </AppLayout>
     );
@@ -80,24 +80,24 @@ export function AnomalyDetail() {
         {/* Back button */}
         <button
           onClick={() => navigate('/')}
-          className="mb-4 text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
+          className="mb-4 text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 text-sm sm:text-base"
         >
           <span>←</span>
           <span>Back to Dashboard</span>
         </button>
 
         {/* Main content */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Anomaly metrics and metadata */}
           <AnomalyDetailPanel anomaly={anomaly} />
 
           {/* Price chart */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Price Context</h2>
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Price Context</h2>
               <button
                 onClick={() => navigate(`/charts/${anomaly.symbol}`)}
-                className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                className="text-sm text-blue-600 hover:text-blue-800 transition-colors self-start sm:self-auto whitespace-nowrap"
               >
                 View full chart →
               </button>
@@ -106,7 +106,7 @@ export function AnomalyDetail() {
               data={priceData?.data ?? []}
               symbol={anomaly.symbol}
               anomalies={[anomaly]}
-              height={400}
+              height={300}
               isLoading={isPriceLoading}
             />
             <p className="mt-2 text-xs text-gray-500">

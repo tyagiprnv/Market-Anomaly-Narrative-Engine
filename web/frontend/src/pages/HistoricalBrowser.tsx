@@ -6,11 +6,13 @@ import { useAnomalies } from '../api/queries/anomalies';
 import { useFilterState } from '../utils/urlState';
 import { AnomalyFilters } from '../components/browser';
 import { AnomalyList } from '../components/dashboard';
-import { Pagination } from '../components/common';
+import { Pagination, ListSkeleton, AnomalyCardSkeleton, NoAnomaliesFound, ErrorState } from '../components/common';
 import { AppLayout } from '../components/layout/AppLayout';
 import { AnomalyDTO } from '@mane/shared/types/api';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export function HistoricalBrowser() {
+  useDocumentTitle('Historical Anomalies');
   const navigate = useNavigate();
   const { filters, setFilters, updateFilter, clearFilters } = useFilterState(20);
 
@@ -24,14 +26,14 @@ export function HistoricalBrowser() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-100 mb-2">Historical Anomalies</h1>
-          <p className="text-gray-400">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-100 mb-2">Historical Anomalies</h1>
+          <p className="text-sm sm:text-base text-gray-400">
             Browse and filter all detected price anomalies across all symbols and timeframes.
           </p>
         </div>
 
         {/* Layout: Filters sidebar + Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6">
           {/* Filters Sidebar */}
           <div className="lg:col-span-1">
             <AnomalyFilters
@@ -42,7 +44,7 @@ export function HistoricalBrowser() {
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3 space-y-4 sm:space-y-6">
             {/* Results Summary */}
             {data && (
               <div className="bg-gray-800 rounded-lg p-4">
@@ -61,43 +63,28 @@ export function HistoricalBrowser() {
 
             {/* Loading State */}
             {isLoading && (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                  <p className="text-gray-400">Loading anomalies...</p>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ListSkeleton count={6} ItemSkeleton={AnomalyCardSkeleton} />
               </div>
             )}
 
             {/* Error State */}
             {isError && (
-              <div className="bg-red-900/20 border border-red-800 rounded-lg p-6 text-center">
-                <p className="text-red-400 mb-2">Failed to load anomalies</p>
-                <p className="text-gray-400 text-sm">
-                  {error instanceof Error ? error.message : 'An unknown error occurred'}
-                </p>
+              <div className="bg-gray-800 rounded-lg p-6">
+                <ErrorState
+                  message={error instanceof Error ? error.message : 'Failed to load anomalies. Please try again.'}
+                />
               </div>
             )}
 
             {/* Anomaly List */}
             {data && !isLoading && !isError && (
               <>
-                {data.data.length === 0 ? (
-                  <div className="bg-gray-800 rounded-lg p-12 text-center">
-                    <p className="text-gray-400 mb-2">No anomalies found</p>
-                    <p className="text-gray-500 text-sm">
-                      Try adjusting your filters or date range
-                    </p>
-                    <button
-                      onClick={clearFilters}
-                      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Clear Filters
-                    </button>
-                  </div>
-                ) : (
-                  <AnomalyList anomalies={data.data} onAnomalyClick={handleAnomalyClick} />
-                )}
+                <AnomalyList
+                  anomalies={data.data}
+                  onAnomalyClick={handleAnomalyClick}
+                  emptyState={<NoAnomaliesFound onClearFilters={clearFilters} />}
+                />
 
                 {/* Pagination */}
                 {data.data.length > 0 && (

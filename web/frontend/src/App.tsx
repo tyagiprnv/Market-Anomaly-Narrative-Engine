@@ -5,6 +5,7 @@
 import React from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { ErrorBoundary, showSuccess, showError } from './components/common';
 import { Dashboard } from './pages/Dashboard';
 import { AnomalyDetail } from './pages/AnomalyDetail';
 import { ChartView } from './pages/ChartView';
@@ -36,10 +37,13 @@ function Login() {
       await login(email, password);
       // Success - redirect to dashboard
       console.log('Login successful, redirecting to dashboard...');
+      showSuccess('Welcome back! Login successful.');
       navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Login failed:', error);
-      setError(error.response?.data?.message || error.message || 'Login failed. Please check your credentials.');
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed. Please check your credentials.';
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -137,10 +141,13 @@ function Register() {
       await register(email, password);
       // Success - redirect to dashboard
       console.log('Registration successful, redirecting to dashboard...');
+      showSuccess('Account created successfully! Welcome to MANE.');
       navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Registration failed:', error);
-      setError(error.response?.data?.message || error.message || 'Registration failed. Please try again.');
+      const errorMessage = error.response?.data?.message || error.message || 'Registration failed. Please try again.';
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -241,43 +248,45 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/anomalies/:id"
-        element={
-          <ProtectedRoute>
-            <AnomalyDetail />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/charts/:symbol?"
-        element={
-          <ProtectedRoute>
-            <ChartView />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/history"
-        element={
-          <ProtectedRoute>
-            <HistoricalBrowser />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/anomalies/:id"
+          element={
+            <ProtectedRoute>
+              <AnomalyDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/charts/:symbol?"
+          element={
+            <ProtectedRoute>
+              <ChartView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <HistoricalBrowser />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
 

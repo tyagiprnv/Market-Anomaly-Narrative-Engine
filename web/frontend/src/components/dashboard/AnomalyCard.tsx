@@ -26,19 +26,32 @@ export function AnomalyCard({ anomaly, onClick }: AnomalyCardProps) {
   const typeColor = getColor(getAnomalyTypeColor(anomaly.anomalyType));
   const validationColor = getColor(getValidationStatusColor(anomaly.narrative?.validationStatus || 'NOT_GENERATED'));
 
+  const handleClick = () => {
+    console.log('Card clicked!', anomaly.id);
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
+  const ariaLabel = `${formatSymbol(anomaly.symbol)} ${getAnomalyTypeLabel(anomaly.anomalyType)} detected ${formatRelativeTime(anomaly.detectedAt)}. Price change: ${formatPercent(anomaly.metrics.priceChangePct)}`;
+
   return (
     <div
       className={`border rounded-lg p-4 ${bgColorMap[typeColor]} ${
-        onClick ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all' : ''
+        onClick ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' : ''
       }`}
-      onClick={(e) => {
-        console.log('Card clicked!', anomaly.id);
-        if (onClick) {
-          onClick();
-        }
-      }}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? ariaLabel : undefined}
     >
       {/* Header: Symbol and Type */}
       <div className="flex justify-between items-start mb-3">

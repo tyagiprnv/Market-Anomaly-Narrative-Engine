@@ -7,6 +7,7 @@ import { AnomalyFilters as Filters } from '@mane/shared/types/api';
 import { AnomalyType, ValidationStatus } from '@mane/shared/types/enums';
 import { SUPPORTED_SYMBOLS, SYMBOL_NAMES } from '@mane/shared/constants/symbols';
 import { saveFilters, loadFilters, hasSavedFilters, clearStoredFilters } from '../../utils/filterStorage';
+import { showSuccess, showInfo } from '../common';
 
 interface AnomalyFiltersProps {
   filters: Filters;
@@ -56,7 +57,7 @@ export function AnomalyFilters({ filters, onFiltersChange, onClear }: AnomalyFil
   // Save current filters
   const handleSaveFilters = () => {
     saveFilters(filters);
-    alert('Filters saved successfully!');
+    showSuccess('Filters saved successfully!');
   };
 
   // Load saved filters
@@ -64,6 +65,7 @@ export function AnomalyFilters({ filters, onFiltersChange, onClear }: AnomalyFil
     const saved = loadFilters();
     if (saved) {
       onFiltersChange({ ...filters, ...saved, page: 1 });
+      showInfo('Filters loaded from saved preset');
     }
   };
 
@@ -71,6 +73,7 @@ export function AnomalyFilters({ filters, onFiltersChange, onClear }: AnomalyFil
   const handleClearAll = () => {
     clearStoredFilters();
     onClear();
+    showInfo('All filters cleared');
   };
 
   const hasActiveFilters =
