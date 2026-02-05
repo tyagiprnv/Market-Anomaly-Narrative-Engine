@@ -6,8 +6,10 @@
 
 Ensure you have:
 - Python 3.12+ (`python --version`) - Tested with Python 3.12.8 and 3.13
+- Node.js 18+ (`node --version`) - For web interface
 - PostgreSQL 14+ (`psql --version`)
 - pip or uv package manager (`pip --version` or `uv --version`)
+- npm or pnpm (`npm --version`) - For web interface
 - Git
 
 ### Initial Setup
@@ -60,6 +62,29 @@ mane init-db
 psql -U postgres -d mane_db -c "\dt"
 ```
 
+7. **Setup web interface** (optional)
+```bash
+# Backend
+cd web/backend
+npm install
+npx prisma generate    # Generate Prisma client from existing DB
+
+# Create .env file
+echo 'DATABASE_URL="postgresql://postgres:devpassword@localhost:5432/mane_db"' > .env
+echo 'JWT_SECRET="dev-secret-change-in-production"' >> .env
+echo 'NODE_ENV="development"' >> .env
+
+# Start backend server (port 3001)
+npm run dev
+
+# Frontend (new terminal)
+cd web/frontend
+npm install
+
+# Start frontend server (port 5173)
+npm run dev
+```
+
 ## Project Structure
 
 ```
@@ -67,7 +92,7 @@ market-anomaly-narrative-engine/
 ├── config/                  # Configuration files
 │   ├── settings.py          # Pydantic settings loader
 │   └── thresholds.yaml      # Per-asset detection thresholds
-├── src/                     # Source code
+├── src/                     # Python source code
 │   ├── phase1_detector/     # ✅ Statistical detection + data ingestion + news
 │   ├── phase2_journalist/   # ✅ LLM agent with tool loop
 │   ├── phase3_skeptic/      # ✅ Validation engine (6 validators)
@@ -75,16 +100,28 @@ market-anomaly-narrative-engine/
 │   ├── llm/                 # ✅ LiteLLM wrapper
 │   ├── orchestration/       # ✅ Pipeline + scheduler
 │   └── cli/                 # ✅ CLI utilities
-├── tests/                   # Test suite
+├── web/                     # ✅ Full-stack web interface
+│   ├── backend/             # Express + TypeScript + Prisma
+│   │   ├── src/             # API routes and middleware
+│   │   ├── prisma/          # Prisma schema (introspected)
+│   │   └── package.json     # Node dependencies
+│   ├── frontend/            # React + TypeScript + Vite
+│   │   ├── src/             # React components
+│   │   ├── public/          # Static assets
+│   │   └── package.json     # Node dependencies
+│   └── shared/              # Shared TypeScript types
+├── tests/                   # Python test suite (216 tests)
 │   ├── unit/                # Unit tests
 │   ├── integration/         # Integration tests
 │   └── fixtures/            # Test data
 ├── docs/                    # Documentation
-├── main.py                  # CLI entry point
-└── pyproject.toml           # Dependencies
+├── main.py                  # Python CLI entry point
+└── pyproject.toml           # Python dependencies
 ```
 
 ## Development Workflow
+
+### Working with Python Backend
 
 ### 1. Create a Feature Branch
 
@@ -94,7 +131,7 @@ git checkout -b feature/your-feature-name
 
 ### 2. Make Changes
 
-Edit code in `src/` directory.
+Edit code in `src/` directory (Python backend).
 
 ### 3. Run Tests
 
@@ -160,6 +197,141 @@ Add Z-score anomaly detector
 git push origin feature/your-feature-name
 # Open Pull Request on GitHub
 ```
+
+---
+
+### Working with Web Interface
+
+### 1. Backend Development (Express + TypeScript)
+
+```bash
+cd web/backend
+
+# Start development server with hot reload
+npm run dev
+
+# Watch mode for TypeScript compilation
+npm run dev
+```
+
+**Making Changes**:
+1. Edit routes in `src/routes/`
+2. Add middleware in `src/middleware/`
+3. Update Prisma schema if needed:
+   ```bash
+   # If Python schema changed, re-introspect
+   npx prisma db pull
+   npx prisma generate
+   ```
+4. Add tests in `tests/`
+5. Run tests: `npm test`
+
+**File Structure**:
+```
+web/backend/src/
+├── index.ts              # Express app entry point
+├── routes/
+│   ├── auth.routes.ts        # Authentication endpoints
+│   ├── anomaly.routes.ts     # Anomaly CRUD
+│   ├── news.routes.ts        # News endpoints
+│   └── ...
+├── middleware/
+│   ├── auth.middleware.ts    # JWT verification
+│   ├── rateLimiter.middleware.ts  # Rate limiting
+│   └── error.middleware.ts   # Error handling
+└── lib/
+    ├── prisma.ts         # Prisma client singleton
+    ├── jwt.ts            # JWT utilities
+    └── logger.ts         # Winston logger
+```
+
+### 2. Frontend Development (React + TypeScript)
+
+```bash
+cd web/frontend
+
+# Start development server with hot reload
+npm run dev
+# Opens http://localhost:5173
+```
+
+**Making Changes**:
+1. Edit pages in `src/pages/`
+2. Add components in `src/components/`
+3. Create hooks in `src/hooks/`
+4. Update API client in `src/lib/api.ts`
+5. Add tests in `src/__tests__/`
+6. Run tests: `npm test`
+
+**File Structure**:
+```
+web/frontend/src/
+├── main.tsx              # Entry point
+├── App.tsx               # Root component with routing
+├── pages/
+│   ├── Dashboard.tsx         # Live anomaly feed
+│   ├── AnomalyDetail.tsx     # Detail view
+│   ├── ChartView.tsx         # Price charts
+│   └── HistoricalBrowser.tsx # Archive browser
+├── components/
+│   ├── dashboard/
+│   ├── charts/
+│   └── common/
+├── hooks/
+│   ├── useAnomalies.ts   # TanStack Query hooks
+│   └── useAuth.ts        # Authentication
+└── lib/
+    ├── api.ts            # API client
+    └── types.ts          # TypeScript types
+```
+
+### 3. Debugging Web Interface
+
+**Backend Debugging**:
+```bash
+cd web/backend
+
+# With Node debugger
+node --inspect dist/index.js
+
+# Or with ts-node
+npm run dev:debug
+
+# Connect with Chrome DevTools or VS Code debugger
+```
+
+**Frontend Debugging**:
+- Use React DevTools browser extension
+- Use browser console (Network tab for API calls)
+- Check TanStack Query DevTools (enabled in dev mode)
+
+**Common Issues**:
+1. **CORS errors**: Check `cors()` configuration in `backend/src/index.ts`
+2. **401 Unauthorized**: Check JWT token in cookies (use browser DevTools)
+3. **Prisma client not generated**: Run `npx prisma generate`
+4. **Port conflicts**: Change `PORT` in backend `.env` or frontend `vite.config.ts`
+
+### 4. Database Changes
+
+When modifying Python database models:
+
+```bash
+# 1. Update src/database/models.py (Python)
+
+# 2. Generate Alembic migration (future)
+alembic revision --autogenerate -m "Add new column"
+alembic upgrade head
+
+# 3. Re-introspect with Prisma
+cd web/backend
+npx prisma db pull      # Pull updated schema
+npx prisma generate     # Regenerate TypeScript types
+
+# 4. Update TypeScript types if needed
+# Edit web/shared/types.ts
+```
+
+---
 
 ## Testing Strategy
 
@@ -495,30 +667,60 @@ python -m memory_profiler script.py
 
 ## Environment Management
 
-### Development Environment
+### Python Development Environment
 
 ```bash
-# .env for development
+# .env for Python backend
 DATABASE__PASSWORD=devpassword
 LLM__PROVIDER=ollama
 LLM__MODEL=llama3.2:3b
 LOG_LEVEL=DEBUG
+DETECTION__ENABLE_MULTI_TIMEFRAME=true
+ORCHESTRATION__PRICE_HISTORY_LOOKBACK_MINUTES=240  # CRITICAL!
+```
+
+### Web Backend Development Environment
+
+```bash
+# web/backend/.env
+DATABASE_URL="postgresql://postgres:devpassword@localhost:5432/mane_db"
+JWT_SECRET="dev-secret-change-in-production"
+NODE_ENV="development"
+CORS_ORIGIN="http://localhost:5173"
+PORT=3001
+```
+
+### Web Frontend Development Environment
+
+```bash
+# web/frontend/.env (optional)
+VITE_API_URL="http://localhost:3001"
 ```
 
 ### Testing Environment
 
 ```bash
-# Use in-memory SQLite for fast tests
+# Python tests - use in-memory SQLite
 DATABASE__URL=sqlite:///:memory:
+
+# Web backend tests
+DATABASE_URL="postgresql://postgres:testpass@localhost:5432/mane_test_db"
+NODE_ENV="test"
 ```
 
 ### Production Environment
 
 ```bash
-# Use environment variables in production
+# Python backend
 export DATABASE__PASSWORD=<secret>
 export ANTHROPIC_API_KEY=<secret>
 export LOG_LEVEL=INFO
+
+# Web backend
+export DATABASE_URL="postgresql://user:pass@prod-host:5432/mane_db?sslmode=require"
+export JWT_SECRET=<strong-random-secret>
+export NODE_ENV="production"
+export CORS_ORIGIN="https://yourdomain.com"
 ```
 
 ## Continuous Integration (Future)

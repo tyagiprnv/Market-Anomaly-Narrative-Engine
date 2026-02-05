@@ -147,9 +147,44 @@ detector = CombinedDetector(
 )
 ```
 
+#### MultiTimeframeDetector
+
+Detects cumulative price changes across multiple time windows (5/15/30/60 minutes).
+
+```python
+from src.phase1_detector.anomaly_detection.statistical import MultiTimeframeDetector
+
+detector = MultiTimeframeDetector(
+    threshold=3.0,
+    timeframe_windows=[5, 15, 30, 60],  # Minutes
+    baseline_multiplier=3  # Baseline = window × 3
+)
+anomalies = detector.detect(prices)
+```
+
+**Key Feature**: Catches "slow burn" cumulative moves that appear normal minute-by-minute.
+- Example: DOGE +0.5%/min for 10 min = +5% total → NOW DETECTED ✓
+- Without multi-timeframe: Each minute (Z-score ~0.8) looks normal → MISSED ✗
+
+**Parameters**:
+- `threshold` (float): Z-score threshold (default: 3.0)
+- `timeframe_windows` (list): Time windows to analyze in parallel (default: [5, 15, 30, 60])
+- `baseline_multiplier` (int): Baseline calculation (default: 3, meaning 60-min window uses 180-min baseline)
+
+**Returns**: Highest confidence anomaly across all timeframes with `detection_metadata` dict:
+```python
+{
+    "timeframe_minutes": 60,
+    "volatility_tier": "stable",
+    "asset_threshold": 3.5,
+    "threshold_source": "asset_override",
+    "detector": "MultiTimeframeDetector"
+}
+```
+
 #### AnomalyDetector (Recommended)
 
-Main detector orchestrating all strategies.
+Main detector orchestrating all strategies with multi-timeframe and asset-aware support.
 
 ```python
 from config.settings import settings
@@ -158,10 +193,17 @@ detector = AnomalyDetector()  # Uses settings from config
 anomalies = detector.detect_all(prices)
 ```
 
-**Logic**:
-1. Checks `CombinedDetector` first (price + volume)
-2. Falls back to individual detectors if no combined anomaly
-3. Returns highest confidence anomaly
+**Logic** (priority order):
+1. `MultiTimeframeDetector` (if enabled) - priority 1
+2. `CombinedDetector` (price + volume) - priority 2
+3. Individual detectors (Z-score, Bollinger, volume) - priority 3
+
+**Configuration** (`.env`):
+```bash
+DETECTION__ENABLE_MULTI_TIMEFRAME=true
+DETECTION__USE_ASSET_SPECIFIC_THRESHOLDS=true
+DETECTION__TIMEFRAME_WINDOWS=[5,15,30,60]
+```
 
 ### Data Models
 
@@ -199,6 +241,12 @@ anomaly = DetectedAnomaly(
 - `price_at_detection` (float): Price at detection
 - `volume_before` (float): Average volume before
 - `volume_at_detection` (float): Volume at detection
+- `detection_metadata` (dict, optional): Metadata about detection:
+  - `timeframe_minutes` (int): Time window used (5/15/30/60)
+  - `volatility_tier` (str): Asset tier (stable/moderate/volatile)
+  - `asset_threshold` (float): Threshold used for this asset
+  - `threshold_source` (str): Source of threshold (asset_override/tier/global)
+  - `detector` (str): Detector class name
 
 **Methods**:
 
@@ -258,6 +306,48 @@ with get_db_context() as db:
     # Auto-committed when exiting context
 ```
 
+### Asset-Aware Detection
+
+#### AssetProfileManager
+
+3-tier threshold lookup system for volatility-aware detection.
+
+```python
+from src.phase1_detector.anomaly_detection.asset_profiles import AssetProfileManager
+
+manager = AssetProfileManager(config_path="config/thresholds.yaml")
+
+# Get threshold for specific asset
+threshold = manager.get_threshold("BTC-USD")
+print(threshold)  # 3.5 (from asset override)
+
+threshold = manager.get_threshold("DOGE-USD")
+print(threshold)  # 2.0 (more sensitive for volatile asset)
+
+threshold = manager.get_threshold("SOL-USD")
+print(threshold)  # 3.0 (from tier multiplier)
+```
+
+**Lookup Priority**:
+1. Asset-specific override (highest)
+2. Volatility tier multiplier
+3. Global default (lowest)
+
+**Configuration** (`config/thresholds.yaml`):
+```yaml
+global_defaults:
+  z_score_threshold: 3.0
+
+volatility_tiers:
+  stable: {multiplier: 1.2, assets: [BTC-USD, ETH-USD]}
+  moderate: {multiplier: 1.0, assets: [SOL-USD, XRP-USD]}
+  volatile: {multiplier: 0.7, assets: [DOGE-USD, SHIB-USD]}
+
+asset_specific_thresholds:
+  BTC-USD: {z_score_threshold: 3.5}
+  DOGE-USD: {z_score_threshold: 2.0}
+```
+
 ### Configuration
 
 #### Loading Settings
@@ -267,11 +357,22 @@ from config.settings import settings
 
 # Access settings
 print(settings.detection.z_score_threshold)  # 3.0
+print(settings.detection.enable_multi_timeframe)  # true
+print(settings.detection.price_history_lookback_minutes)  # 240 (CRITICAL!)
 print(settings.llm.provider)  # 'anthropic'
 print(settings.database.url)  # postgresql://...
 
 # Modify at runtime (not persisted)
 settings.detection.z_score_threshold = 4.0
+```
+
+**CRITICAL Configuration** ⚠️:
+```python
+# MUST be 240 for multi-timeframe detection
+settings.orchestration.price_history_lookback_minutes = 240
+
+# Why: 60-min window + (60 × 3 baseline) = 240 minutes minimum
+# Setting to 60 caused major bug where 5-8% drops were missed!
 ```
 
 #### Custom Settings
@@ -503,98 +604,138 @@ Per-Symbol Metrics
 }
 ```
 
-#### `mane backfill` (Future)
+#### `mane backfill`
 
-Backfill historical price data.
+Backfill historical price data from exchanges.
 
 ```bash
-mane backfill --days 30 --symbol BTC-USD
+# Single symbol
+mane backfill --symbol BTC-USD --days 7
 
-# Options:
-#   --days INT       Number of days to backfill (default: 7)
-#   --symbol TEXT    Crypto symbol (default: all symbols)
+# All symbols
+mane backfill --all --days 30
 ```
 
-## REST API (Future)
+**Options**:
+- `--symbol TEXT` - Crypto symbol to backfill (e.g., BTC-USD)
+- `--all` - Backfill all configured symbols
+- `--days INT` - Number of days to backfill (default: 7)
 
-### Planned Endpoints
-
-#### GET /anomalies
-
-Get recent anomalies.
-
-**Request**:
-```http
-GET /anomalies?symbol=BTC-USD&limit=10
+**Output**:
+```
+Backfilling BTC-USD prices for 7 days...
+Fetching 10,080 1-minute candles (7 days × 1,440 minutes)
+Progress: ████████████████████ 100% (10,080/10,080)
+✓ Stored 9,823 new prices (257 duplicates skipped)
+Completed in 12.3 seconds
 ```
 
-**Response**:
+#### `mane backfill-news`
+
+Create historical news datasets for replay mode testing.
+
+```bash
+mane backfill-news --symbol BTC-USD \
+  --start-date 2024-03-14 \
+  --end-date 2024-03-14 \
+  --file-path datasets/news/btc_mar14.json
+```
+
+**Options**:
+- `--symbol TEXT` - Crypto symbol (required)
+- `--start-date DATE` - Start date (YYYY-MM-DD, required)
+- `--end-date DATE` - End date (YYYY-MM-DD, required)
+- `--file-path PATH` - Output JSON file path (required)
+- `--sources LIST` - News sources to use (default: all enabled sources)
+
+**Output Format** (JSON):
 ```json
 {
-  "anomalies": [
+  "metadata": {
+    "symbol": "BTC-USD",
+    "start_date": "2024-03-14",
+    "end_date": "2024-03-14",
+    "created_at": "2024-01-15T14:30:00Z",
+    "article_count": 147
+  },
+  "articles": [
     {
-      "id": "uuid",
-      "symbol": "BTC-USD",
-      "detected_at": "2024-01-15T14:15:00Z",
-      "anomaly_type": "price_drop",
-      "price_change_pct": -5.2,
-      "z_score": -3.87,
-      "confidence": 0.89,
-      "narrative": {
-        "text": "Bitcoin dropped 5.2% at 2:15 PM UTC...",
-        "validated": true
-      }
+      "title": "Bitcoin Surges Past $70,000",
+      "source": "CoinDesk",
+      "url": "https://...",
+      "published_at": "2024-03-14T10:30:00Z",
+      "summary": "Bitcoin reached a new all-time high...",
+      "sentiment": "positive"
     }
-  ],
-  "total": 1
+  ]
 }
 ```
 
-#### POST /detect
+**Usage with Replay Mode**:
+```bash
+# 1. Create dataset
+mane backfill-news --symbol BTC-USD --start-date 2024-03-14 --end-date 2024-03-14 --file-path datasets/news/my_news.json
 
-Manually trigger detection for a symbol.
+# 2. Run detection in replay mode
+mane detect --symbol BTC-USD --news-mode replay
 
-**Request**:
-```http
-POST /detect
-Content-Type: application/json
-
-{
-  "symbol": "BTC-USD",
-  "threshold": 3.0
-}
+# 3. Or hybrid mode (combines live + replay)
+mane detect --symbol BTC-USD --news-mode hybrid
 ```
 
-**Response**:
-```json
-{
-  "anomaly": {...},
-  "narrative": "...",
-  "validation_passed": true
-}
+## REST API
+
+The REST API is **fully implemented** and production-ready. See `docs/API_REFERENCE.md` for complete documentation.
+
+**Base URL**: `http://localhost:3001` (development)
+
+**Quick Overview**:
+
+### Authentication
+- `POST /auth/register` - Create account
+- `POST /auth/login` - Login (returns JWT in httpOnly cookie)
+- `POST /auth/logout` - Logout
+- `GET /auth/me` - Get current user
+
+### Anomalies
+- `GET /api/anomalies` - List anomalies with filtering/pagination
+- `GET /api/anomalies/:id` - Get anomaly details with news and prices
+
+### News
+- `GET /api/news` - List news articles with filtering
+
+### Prices
+- `GET /api/prices` - Get price history for charting
+- `GET /api/prices/latest` - Get latest price
+
+### Symbols
+- `GET /api/symbols` - List supported symbols
+
+### Configuration
+- `GET /api/config/thresholds` - Get detection thresholds
+- `GET /api/config/settings` - Get system settings
+
+### Health
+- `GET /health` - System health check
+
+**Example**:
+```bash
+# Login
+curl -X POST http://localhost:3001/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"pass"}' \
+  -c cookies.txt
+
+# Get anomalies
+curl http://localhost:3001/api/anomalies?symbol=BTC-USD&limit=10 \
+  -b cookies.txt
+
+# Get anomaly details
+curl http://localhost:3001/api/anomalies/550e8400-e29b-41d4-a716-446655440000 \
+  -b cookies.txt
 ```
 
-#### GET /narratives/{id}
-
-Get specific narrative.
-
-**Request**:
-```http
-GET /narratives/uuid
-```
-
-**Response**:
-```json
-{
-  "id": "uuid",
-  "anomaly_id": "uuid",
-  "narrative_text": "Bitcoin dropped 5.2%...",
-  "validation_passed": true,
-  "tools_used": ["verify_timestamp", "sentiment_check"],
-  "llm_provider": "anthropic",
-  "created_at": "2024-01-15T14:15:30Z"
-}
-```
+**See complete API reference**: `docs/API_REFERENCE.md`
 
 ## Error Handling
 

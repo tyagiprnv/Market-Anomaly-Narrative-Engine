@@ -117,6 +117,9 @@ CREATE TABLE anomalies (
     volume_before FLOAT,
     volume_at_detection FLOAT,
 
+    -- Detection metadata (NEW in v0.2)
+    detection_metadata JSON,
+
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -133,6 +136,28 @@ CREATE INDEX idx_symbol_detected ON anomalies(symbol, detected_at DESC);
 - `z_score`: How many standard deviations from mean
 - `confidence`: 0-1 score (higher = more significant)
 - `baseline_window_minutes`: Lookback period used for detection
+- `detection_metadata` (JSON): Metadata about detection method (NEW in v0.2)
+
+**Detection Metadata Structure**:
+```json
+{
+  "timeframe_minutes": 60,
+  "volatility_tier": "stable",
+  "asset_threshold": 3.5,
+  "threshold_source": "asset_override",
+  "detector": "MultiTimeframeDetector"
+}
+```
+
+**Fields**:
+- `timeframe_minutes` (int): Time window used (5/15/30/60 minutes)
+- `volatility_tier` (string): Asset classification (stable/moderate/volatile)
+- `asset_threshold` (float): Actual threshold applied for this asset
+- `threshold_source` (string): Where threshold came from:
+  - `asset_override` - From config/thresholds.yaml asset_specific_thresholds
+  - `tier` - From volatility tier multiplier
+  - `global` - From global defaults
+- `detector` (string): Detector class name (MultiTimeframeDetector, ZScoreDetector, etc.)
 
 **Indexes**:
 - `idx_symbol_detected`: Fast lookups for recent anomalies per symbol
@@ -210,6 +235,48 @@ CREATE INDEX idx_cluster_anomaly ON news_clusters(anomaly_id);
 
 ---
 
+### 6. `backfill_progress`
+
+**Purpose**: Track historical data backfill state (prevents duplicate work).
+
+```sql
+CREATE TABLE backfill_progress (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(20) NOT NULL,
+    data_type VARCHAR(20) NOT NULL,  -- 'prices' or 'news'
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL,     -- 'in_progress', 'completed', 'failed'
+    records_processed INTEGER DEFAULT 0,
+    error_message TEXT,
+    started_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_backfill_symbol_type ON backfill_progress(symbol, data_type);
+CREATE INDEX idx_backfill_status ON backfill_progress(status);
+```
+
+**Key Fields**:
+- `symbol`: Crypto pair being backfilled
+- `data_type`: Type of data (`prices` or `news`)
+- `start_date` / `end_date`: Date range being backfilled
+- `status`: Current backfill status
+  - `in_progress`: Currently running
+  - `completed`: Successfully finished
+  - `failed`: Encountered error
+- `records_processed`: Number of records inserted
+- `error_message`: Error details if status = 'failed'
+
+**Purpose**: Enables:
+- Resume interrupted backfills
+- Track backfill history
+- Prevent duplicate backfills for same date range
+- Monitor backfill performance
+
+---
+
 ### 5. `narratives`
 
 **Purpose**: Store AI-generated explanations of anomalies.
@@ -260,7 +327,7 @@ CREATE INDEX idx_narrative_validated ON narratives(validation_passed);
 
 ## Common Queries
 
-### 1. Get Recent Anomalies with Narratives
+### 1. Get Recent Anomalies with Narratives and Detection Metadata
 
 ```sql
 SELECT
@@ -269,6 +336,9 @@ SELECT
     a.anomaly_type,
     a.price_change_pct,
     a.confidence,
+    a.detection_metadata,
+    a.detection_metadata->>'detector' AS detector_name,
+    a.detection_metadata->>'timeframe_minutes' AS timeframe,
     n.narrative_text,
     n.validation_passed
 FROM anomalies a
@@ -276,6 +346,16 @@ LEFT JOIN narratives n ON a.id = n.anomaly_id
 WHERE a.detected_at > NOW() - INTERVAL '24 hours'
 ORDER BY a.detected_at DESC
 LIMIT 20;
+```
+
+### 1b. Filter Anomalies by Multi-Timeframe Detector
+
+```sql
+SELECT *
+FROM anomalies
+WHERE detection_metadata->>'detector' = 'MultiTimeframeDetector'
+  AND (detection_metadata->>'timeframe_minutes')::int = 60
+  AND detected_at > NOW() - INTERVAL '7 days';
 ```
 
 ### 2. Find Anomalies with High-Confidence News Clusters
@@ -394,7 +474,89 @@ CREATE TABLE prices_2024_01 PARTITION OF prices
 FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
 ```
 
-## Migrations with Alembic
+## Web Backend (Prisma ORM)
+
+The web backend uses **Prisma** which introspects the Python-owned PostgreSQL schema.
+
+**Setup Process**:
+
+```bash
+cd web/backend
+
+# 1. Introspect existing database (reads schema created by Python)
+npx prisma db pull
+
+# 2. Generate Prisma client (TypeScript types)
+npx prisma generate
+```
+
+**Generated Schema** (`web/backend/prisma/schema.prisma`):
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Anomaly {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  symbol              String    @db.VarChar(20)
+  detected_at         DateTime
+  anomaly_type        String    @db.VarChar(20)
+  z_score             Float?
+  price_change_pct    Float?
+  confidence          Float?
+  detection_metadata  Json?     // Maps to JSON column
+
+  narrative           Narrative?
+  news_articles       NewsArticle[]
+  news_clusters       NewsCluster[]
+
+  @@index([symbol, detected_at])
+  @@map("anomalies")
+}
+
+// ... other models
+```
+
+**Usage in TypeScript**:
+```typescript
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+// Query with type safety
+const anomalies = await prisma.anomaly.findMany({
+  where: {
+    symbol: 'BTC-USD',
+    detection_metadata: {
+      path: ['detector'],
+      equals: 'MultiTimeframeDetector'
+    }
+  },
+  include: { narrative: true },
+  orderBy: { detected_at: 'desc' },
+});
+
+// detection_metadata is typed as Prisma.JsonValue
+const metadata = anomalies[0].detection_metadata as {
+  timeframe_minutes: number;
+  volatility_tier: string;
+};
+```
+
+**Key Points**:
+- Schema is **read-only** for Prisma (Python owns it)
+- Never run `prisma db push` or `prisma migrate` (would conflict with Python)
+- Re-run `prisma db pull` after Python schema changes
+- Prisma provides type-safe queries in TypeScript
+
+---
+
+## Migrations with Alembic (Python)
 
 ### Initial Migration
 
@@ -415,11 +577,16 @@ When modifying `src/database/models.py`:
 
 ```bash
 # Generate migration
-alembic revision --autogenerate -m "Add sentiment column"
+alembic revision --autogenerate -m "Add detection_metadata column"
 
 # Review migration file in alembic/versions/
 # Apply migration
 alembic upgrade head
+
+# IMPORTANT: After applying, regenerate Prisma client
+cd web/backend
+npx prisma db pull      # Pull updated schema
+npx prisma generate     # Regenerate TypeScript types
 ```
 
 ## Backup & Restore
