@@ -39,7 +39,7 @@ mane detect --symbol BTC-USD --news-mode live
 ## Architecture
 
 ```mermaid
-graph TD
+graph LR
     subgraph Phase1["PHASE 1: DETECTOR"]
         A[Price Data<br/>Coinbase API] --> B[Multi-Timeframe<br/>Statistical Detection]
         C[News Sources<br/>RSS Feeds] --> D[News Clustering<br/>HDBSCAN]
