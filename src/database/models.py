@@ -67,7 +67,7 @@ class Anomaly(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     symbol = Column(String(20), nullable=False, index=True)
     detected_at = Column(DateTime, nullable=False, index=True)
-    anomaly_type = Column(Enum(AnomalyTypeEnum), nullable=False)
+    anomaly_type = Column(Enum(AnomalyTypeEnum, values_callable=lambda x: [e.value for e in x]), nullable=False)
 
     # Statistical metrics
     z_score = Column(Float)

@@ -268,8 +268,8 @@ class OrchestrationSettings(BaseSettings):
 
     # Price history
     price_history_lookback_minutes: int = Field(
-        default=60,
-        description="Minutes of price history to fetch for detection",
+        default=240,
+        description="Minutes of price history to fetch for detection (min 240 for 60-min multi-timeframe window)",
     )
 
     min_price_points: int = Field(
