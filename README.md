@@ -6,14 +6,6 @@ MANE solves a critical problem in quantitative finance: dashboards tell you *wha
 
 > **Architecture Philosophy**: Workflow first (predictable), Agent second (reasoning)
 
-## 💰 Cost-Efficient Design
-
-**Zero API costs in production!** Free RSS news sources with optional historical replay mode for deterministic testing.
-
-- **Production Cost**: $0/month (down from $500/month with paid APIs)
-- **News Quality**: 85-90% of paid API quality through keyword sentiment + LLM validation
-- **Testing**: 100% deterministic with replay mode
-
 ## Quick Start
 
 **Prerequisites**: Python 3.12+ · [uv](https://github.com/astral-sh/uv) · PostgreSQL 14+ · LLM API key
